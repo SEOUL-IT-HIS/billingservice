@@ -1,0 +1,24 @@
+server:
+  port: 9292
+
+spring:
+  application:
+    name: billingservice
+
+  datasource:
+    url: jdbc:oracle:thin:@//seoulit.pe.kr:1521/FREEPDB1
+    username: billing
+    password: billing
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
