@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.seoulit.his.billingservice.billing.repository.BillingDetailMapper">
+
+    <!-- 상태/기간 조건 검색 -->
+    <select id="searchDetails" resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDto">
+        SELECT
+            bd.billing_detail_id   AS billingDetailId,
+            bd.item_name           AS itemName,
+            bd.quantity            AS quantity,
+            bd.unit_price          AS unitPrice,
+            bd.amount              AS amount,
+            bd.detail_status       AS detailStatus,
+            bm.fee_name            AS feeName,
+            bm.insurance_type_code AS insuranceTypeCode,
+            bd.occurred_at         AS occurredAt
+        FROM BILLING_DETAIL bd
+                 JOIN BILLING_MASTER bm ON bd.billing_master_id = bm.billing_master_id
+        <where>
+            <if test="detailStatus != null">
+                AND bd.detail_status = #{detailStatus}
+            </if>
+            <if test="from != null">
+                AND bd.occurred_at &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND bd.occurred_at &lt; #{to} + 1
+            </if>
+        </where>
+        ORDER BY bd.occurred_at
+    </select>
+
+    <!-- 진료비 상세 조회 유스케이스 -->
+    <select id="selectDetailsByBillingId" resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDto">
+        SELECT
+            bd.billing_detail_id   AS billingDetailId,
+            bd.item_name           AS itemName,
+            bd.quantity            AS quantity,
+            bd.unit_price          AS unitPrice,
+            bd.amount              AS amount,
+            bd.detail_status       AS detailStatus,
+            bm.fee_name            AS feeName,
+            bm.insurance_type_code AS insuranceTypeCode,
+            bd.occurred_at         AS occurredAt
+        FROM BILLING_DETAIL bd
+                 JOIN BILLING_MASTER bm ON bd.billing_master_id = bm.billing_master_id
+        WHERE bd.billing_id = #{billingId}
+        ORDER BY bd.occurred_at
+    </select>
+
+    <!-- 상세 항목 등록 -->
+    <insert id="insertDetail">
+        INSERT INTO BILLING_DETAIL (
+            billing_detail_id, billing_id, billing_master_id,
+            source_service_code, source_record_id, fee_code, item_name,
+            quantity, unit_price, amount, detail_status,
+            occurred_at, created_at, updated_at
+        ) VALUES (
+                     #{detailId}, #{billingId}, #{dto.billingMasterId},
+                     #{dto.sourceServiceCode}, #{dto.sourceRecordId}, #{dto.feeCode}, #{dto.itemName},
+                     #{dto.quantity}, #{dto.unitPrice}, #{dto.amount}, 'READY',
+                     SYSTIMESTAMP, SYSTIMESTAMP, SYSTIMESTAMP
+                 )
+    </insert>
+
+    <!-- 상세 항목 수정 -->
+    <update id="updateDetail">
+        UPDATE BILLING_DETAIL
+        SET item_name  = #{dto.itemName},
+            quantity   = #{dto.quantity},
+            unit_price = #{dto.unitPrice},
+            amount     = #{dto.amount},
+            updated_at = SYSTIMESTAMP
+        WHERE billing_detail_id = #{detailId}
+    </update>
+
+    <!-- 상태 변경 (취소 등, soft delete) -->
+    <update id="updateStatus">
+        UPDATE BILLING_DETAIL
+        SET detail_status = #{status},
+            updated_at    = SYSTIMESTAMP
+        WHERE billing_detail_id = #{detailId}
+    </update>
+
+</mapper>
