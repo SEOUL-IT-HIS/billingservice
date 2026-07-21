@@ -6,9 +6,9 @@ spring:
     name: billingservice
 
   datasource:
-    url: jdbc:oracle:thin:@//seoulit.pe.kr:1521/FREEPDB1
-    username: billing
-    password: billing
+    url: jdbc:oracle:thin:@//<db-host>:1521/<service-name>
+    username: <db-username>
+    password: <db-password>
     driver-class-name: oracle.jdbc.OracleDriver
 
   jpa:

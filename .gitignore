@@ -39,3 +39,6 @@ out/
 ### Secrets ###
 src/main/resources/application.properties
 !src/main/resources/application.properties.example
+src/main/resources/application.yml
+src/main/resources/application-*.yml
+!src/main/resources/application-example.yml
