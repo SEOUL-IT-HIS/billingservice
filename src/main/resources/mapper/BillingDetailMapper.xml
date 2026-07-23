@@ -1,0 +1,40 @@
+<select id="findBillingDetails"
+        parameterType="kr.co.seoulit.his.billingservice.detail.dto.BillingDetailSearchDTO"
+        resultType="kr.co.seoulit.his.billingservice.detail.dto.BillingDetailDTO">
+
+    SELECT
+    bd.BILLING_DETAIL_ID    AS billingDetailId,
+    bd.BILLING_MASTER_ID    AS billingMasterId,
+    bd.SOURCE_SERVICE_CODE  AS sourceServiceCode,
+    bd.SOURCE_RECORD_ID     AS sourceRecordId,
+    bd.FEE_CODE             AS feeCode,
+    bd.ITEM_NAME            AS itemName,
+    bd.QUANTITY             AS quantity,
+    bd.UNIT_PRICE           AS unitPrice,
+    bd.AMOUNT               AS amount,
+    bd.DETAIL_STATUS        AS detailStatus,
+    bd.OCCURRED_AT          AS occurredAt,
+    bd.CREATED_AT           AS createdAt,
+    bd.UPDATED_AT           AS updatedAt,
+    bm.DEFAULT_PRICE        AS defaultPrice
+
+    FROM BILLING_DETAIL bd,
+    BILLING_MASTER bm
+
+    WHERE bd.BILLING_MASTER_ID = bm.BILLING_MASTER_ID
+
+    <if test="billingDetailId != null and billingDetailId != ''">
+        AND bd.BILLING_DETAIL_ID = #{billingDetailId}
+    </if>
+
+    <if test="feeCode != null and feeCode != ''">
+        AND bd.FEE_CODE = #{feeCode}
+    </if>
+
+    <if test="detailStatus != null and detailStatus != ''">
+        AND bd.DETAIL_STATUS = #{detailStatus}
+    </if>
+
+    ORDER BY bd.CREATED_AT DESC
+
+</select>
