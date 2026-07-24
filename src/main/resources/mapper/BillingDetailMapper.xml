@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository">
+
+<!--진료비 상세 전체 조회-->
+<select id="findAllBillingDetails"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+
+    SELECT
+    BILLING_DETAIL_ID   AS billingDetailId,
+    BILLING_MASTER_ID   AS billingMasterId,
+    SOURCE_SERVICE_CODE AS sourceServiceCode,
+    SOURCE_RECORD_ID    AS sourceRecordId,
+    FEE_CODE            AS feeCode,
+    ITEM_NAME           AS itemName,
+    QUANTITY            AS quantity,
+    UNIT_PRICE          AS unitPrice,
+    AMOUNT              AS amount,
+    DETAIL_STATUS       AS detailStatus,
+    OCCURRED_AT         AS occurredAt,
+    CREATED_AT          AS createdAt,
+    UPDATED_AT          AS updatedAt
+    FROM BILLING_DETAIL
+    ORDER BY CREATED_AT DESC
+
+</select>
+
+<!--진료비 상세 단일 조회-->
+<select id="findByBillingDetailId"
+        parameterType="string"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+
+    SELECT
+    BILLING_DETAIL_ID   AS billingDetailId,
+    BILLING_MASTER_ID   AS billingMasterId,
+    SOURCE_SERVICE_CODE AS sourceServiceCode,
+    SOURCE_RECORD_ID    AS sourceRecordId,
+    FEE_CODE            AS feeCode,
+    ITEM_NAME           AS itemName,
+    QUANTITY            AS quantity,
+    UNIT_PRICE          AS unitPrice,
+    AMOUNT              AS amount,
+    DETAIL_STATUS       AS detailStatus,
+    OCCURRED_AT         AS occurredAt,
+    CREATED_AT          AS createdAt,
+    UPDATED_AT          AS updatedAt
+    FROM BILLING_DETAIL
+    WHERE BILLING_DETAIL_ID = #{billingDetailId}
+
+</select>
+
+<!--진료비 상세 등록-->
+<insert id="insertBillingDetail"
+        parameterType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+
+    INSERT INTO BILLING_DETAIL (
+        BILLING_DETAIL_ID,
+        BILLING_MASTER_ID,
+        SOURCE_SERVICE_CODE,
+        SOURCE_RECORD_ID,
+        FEE_CODE,
+        ITEM_NAME,
+        QUANTITY,
+        UNIT_PRICE,
+        AMOUNT,
+        DETAIL_STATUS,
+        OCCURRED_AT,
+        CREATED_AT,
+        UPDATED_AT
+    ) VALUES (
+        #{billingDetailId},
+        #{billingMasterId},
+        #{sourceServiceCode},
+        #{sourceRecordId},
+        #{feeCode},
+        #{itemName},
+        #{quantity},
+        #{unitPrice},
+        #{amount},
+        #{detailStatus},
+        #{occurredAt},
+        #{createdAt},
+        #{updatedAt}
+    )
+
+</insert>
+
+<!--수납 가능 여부 및 처리 상태 확인-->
+    <select id="findBillingStatusByDetailId"
+        parameterType="string"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+
+    SELECT
+    BILLING_DETAIL_ID AS billingDetailId,
+    DETAIL_STATUS     AS detailStatus
+    FROM BILLING_DETAIL
+    WHERE BILLING_DETAIL_ID = #{billingDetailId}
+
+    </select>
+<!--상태 변경 전 수납정보 존재 여부 확인-->
+    <select id="selectBillingDetailForStatusUpdate"
+        parameterType="string"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+
+    SELECT
+    BILLING_DETAIL_ID AS billingDetailId,
+    DETAIL_STATUS     AS detailStatus
+    FROM BILLING_DETAIL
+    WHERE BILLING_DETAIL_ID = #{billingId}
+
+    </select>
+
+<!--상태 변경 -->
+    <update id="updateBillingStatusToSuccess"
+            parameterType="string">
+
+        UPDATE billing
+        SET billing_status = 'SUCCESS',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE billing_id = #{billingId}
+          AND billing_status = 'READY'
+
+    </update>
+
+
+</mapper>
