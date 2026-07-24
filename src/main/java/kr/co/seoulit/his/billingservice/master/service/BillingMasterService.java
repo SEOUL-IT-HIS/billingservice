@@ -1,16 +1,16 @@
 package kr.co.seoulit.his.billingservice.master.service;
 
-import kr.co.seoulit.his.billingservice.master.dto.BillingDTO;
+import kr.co.seoulit.his.billingservice.master.dto.BillingMasterDTO;
 
 import java.util.List;
 
 public interface BillingMasterService {
 
-    List<BillingDTO> getAllActiveBillingMasters();
+    List<BillingMasterDTO> getAllActiveBillingMasters();
 
-    BillingDTO getBillingMasterById(String billingMasterId);
+    BillingMasterDTO getBillingMasterById(String billingMasterId);
 
-    BillingDTO createBillingMaster(BillingDTO billingDTO);
+    BillingMasterDTO createBillingMaster(BillingMasterDTO billingDTO);
     
     // ※ 수정,삭제 - 임의로 변경하거나 삭제 지양 
     // 권한 있는 관리자만 변경

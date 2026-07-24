@@ -67,4 +67,28 @@ public class BillingDetailServiceImpl implements BillingDetailService {
 
         return billingDetailDTO;
     }
+    //상태값 변경
+    @Override
+    public void updateBillingStatusToSuccess(String billingId) {
+
+        BillingDetailDTO billingDetailDTO =
+                billingDetailRepository.selectBillingDetailForStatusUpdate(billingId);
+
+        if (billingDetailDTO == null) {
+            throw new BusinessException(
+                    ErrorCode.BILLING_MASTER_NOT_BILLINGID);
+        }
+    }
+
+    @Override
+    public BillingDetailDTO getBillingStatus(String billingDetailId) {
+
+        BillingDetailDTO billingDetailDTO =
+                billingDetailRepository.findBillingStatusByDetailId(billingDetailId);
+
+        if (billingDetailDTO == null) {throw new BusinessException(ErrorCode.BILLING_DETAIL_NOT_FOUND);}
+
+        return billingDetailDTO;
+    }
+
 }

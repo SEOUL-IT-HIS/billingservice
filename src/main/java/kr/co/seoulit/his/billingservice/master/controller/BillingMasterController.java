@@ -2,7 +2,7 @@ package kr.co.seoulit.his.billingservice.master.controller;
 
 import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
-import kr.co.seoulit.his.billingservice.master.dto.BillingDTO;
+import kr.co.seoulit.his.billingservice.master.dto.BillingMasterDTO;
 import kr.co.seoulit.his.billingservice.master.service.BillingMasterService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/billing/master")
+@RequestMapping("/api/billing/master")
 
 public class BillingMasterController{
 
@@ -21,7 +21,7 @@ public class BillingMasterController{
         }
         //전체조회 - 데이터 많아지면 조건조회로 변경할 예정.
         @GetMapping
-        public ResponseEntity<ApiResponse<List<BillingDTO>>> getAllActiveBillingMasters(){
+        public ResponseEntity<ApiResponse<List<BillingMasterDTO>>> getAllActiveBillingMasters(){
             return ResponseEntity.ok(
                 ApiResponse.success(
                     SuccessCode.OK.getMessage(),
@@ -31,7 +31,7 @@ public class BillingMasterController{
         }
         //수납식별 아이디를 가져와서 단일 조회  
         @GetMapping("/{billingMasterId}")
-        public ResponseEntity<ApiResponse<BillingDTO>> getBillingMaster(@PathVariable String billingMasterId){
+        public ResponseEntity<ApiResponse<BillingMasterDTO>> getBillingMaster(@PathVariable String billingMasterId){
             return ResponseEntity.ok(
                 ApiResponse.success(
                     SuccessCode.OK.getMessage(),
@@ -41,12 +41,12 @@ public class BillingMasterController{
         }
         //수납 기준정보 생성-http요청 본문 내용을 자바 객체로 변환. 
         @PostMapping
-        public ResponseEntity<ApiResponse<BillingDTO>> createBillingMaster(
-                            @RequestBody BillingDTO billingDTO) {
+        public ResponseEntity<ApiResponse<BillingMasterDTO>> createBillingMaster(
+                            @RequestBody BillingMasterDTO billingMasterDTO) {
             return ResponseEntity.ok(
             ApiResponse.success(
                     SuccessCode.CREATED.getMessage(),
-                    billingMasterService.createBillingMaster(billingDTO)
+                    billingMasterService.createBillingMaster(billingMasterDTO)
             )
     );
 }

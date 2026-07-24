@@ -12,4 +12,7 @@ public interface BillingDetailService {
 
     BillingDetailDTO createBillingDetail(BillingDetailDTO billingDetailDTO);
 
+    void updateBillingStatusToSuccess(String billingId);
+
+    BillingDetailDTO getBillingStatus(String billingDetailId);
 }

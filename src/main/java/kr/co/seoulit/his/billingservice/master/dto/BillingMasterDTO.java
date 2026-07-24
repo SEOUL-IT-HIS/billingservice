@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 
-public class BillingDTO{
+public class BillingMasterDTO{
        private String billingMasterId;
        private String sourceServiceCode;
        private String feeCode;
