@@ -1,6 +1,7 @@
 package kr.co.seoulit.his.billingservice.billing.repository;
 
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO;
+import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -9,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface BillingDetailRepository {
 
-    // 전체 조회
-    List<BillingDetailDTO> findAllBillingDetails();
+    // 조건 검색
+    List<BillingDetailDTO> searchBillingDetails(BillingDetailSearchDTO searchDTO);
 
     // 상태별 조회
     List<BillingDetailDTO> findByDetailStatus(String detailStatus);
@@ -26,7 +27,4 @@ public interface BillingDetailRepository {
 
     // READY 상태를 SUCCESS로 변경
     void updateBillingStatusToSuccess(@PathVariable("billingId") String billingId);
-
-    // 등록
-    int insertBillingDetail(BillingDetailDTO billingDetailDTO);
 }
