@@ -61,5 +61,26 @@ public class BillingDetailServiceImpl implements BillingDetailService {
 
         return billingDetailDTO;
     }
+    //방문id로 조회
+    @Override
+    public List<BillingDetailDTO> getVisitBillingPreview(String visitId){
+
+        List<BillingDetailDTO> billingDetails
+                =billingDetailRepository.findBillingPreviewByVisitId(visitId);
+        //service->repository->xml(sql)
+        return billingDetails;
+    }
+    //입원id로 조회
+    @Override
+    public List<BillingDetailDTO> getAdmissionBillingPreview(String admissionId){
+
+        List<BillingDetailDTO> billingDetails
+                =billingDetailRepository.findBillingPreviewByAdmissionId(admissionId);
+        //service->repository->xml(sql)
+        return billingDetails;
+    }
+
+
+
 
 }

@@ -93,5 +93,70 @@
 
     </update>
 
+    <select id="findBillingPreviewByVisitId"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+
+        SELECT
+            billing_detail_id      AS billingDetailId,
+            billing_master_id      AS billingMasterId,
+            patient_id             AS patientId,
+            visit_id               AS visitId,
+            admission_id           AS admissionId,
+            source_service_code    AS sourceServiceCode,
+            source_record_id       AS sourceRecordId,
+            fee_code               AS feeCode,
+            item_name              AS itemName,
+            quantity               AS quantity,
+            unit_price             AS unitPrice,
+            amount                 AS amount,
+            detail_status          AS detailStatus,
+            occurred_at            AS occurredAt,
+            created_at             AS createdAt,
+            updated_at             AS updatedAt
+        FROM billing_detail
+                 JOIN billing_detail bd
+                      ON b.billing_id = bd.billing_id
+
+                 JOIN billing_master bm
+                      ON bd.billing_master_id = bm.billing_master_id
+        WHERE visit_id = #{visitId}
+        ORDER BY occurred_at ASC
+
+    </select>
+<!-- 방문ID 기준 외래진료비 미리보기  -->
+
+
+    <select id="findBillingPreviewByAdmissionId"
+            parameterType="string">
+        SELECT
+            billing_detail_id      AS billingDetailId,
+            billing_master_id      AS billingMasterId,
+            patient_id             AS patientId,
+            visit_id               AS visitId,
+            admission_id           AS admissionId,
+            source_service_code    AS sourceServiceCode,
+            source_record_id       AS sourceRecordId,
+            fee_code               AS feeCode,
+            item_name              AS itemName,
+            quantity               AS quantity,
+            unit_price             AS unitPrice,
+            amount                 AS amount,
+            detail_status          AS detailStatus,
+            occurred_at            AS occurredAt,
+            created_at             AS createdAt,
+            updated_at             AS updatedAt
+        FROM billing_detail
+                 JOIN billing_detail bd
+                      ON b.billing_id = bd.billing_id
+
+                 JOIN billing_master bm
+                      ON bd.billing_master_id = bm.billing_master_id
+        WHERE admission_id = #{admissionId}
+        ORDER BY occurred_at ASC
+
+    </select>
+    <!-- 입원ID 기준 외래진료비 미리보기  -->
+
 
 </mapper>

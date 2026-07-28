@@ -68,5 +68,24 @@ public class BillingDetailController {
         );
     }
 
+//    컨트롤러가 조회하는 방식이 잘못돼서 새로 작성
+    @GetMapping("/preview/visit/{visitId}")
+    public ResponseEntity<ApiResponse<List<BillingDetailDTO>>>previewVistiId(
+            @PathVariable String visitId){
+        List<BillingDetailDTO> billingDetails=
+        billingDetailService.getVisitBillingPreview(visitId);
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.OK.getMessage(), billingDetails));
+    }
+    @GetMapping("/preview/admission/{admissionId}")
+    public ResponseEntity<ApiResponse<List<BillingDetailDTO>>>previewAdmissionId(
+            @PathVariable String admissionId)
+    {
+        List<BillingDetailDTO> billingDetails=
+                billingDetailService.getAdmissionBillingPreview(admissionId);
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.OK.getMessage(), billingDetails));
+    }
+
+
+
 
 }

@@ -27,4 +27,8 @@ public interface BillingDetailRepository {
 
     // READY 상태를 SUCCESS로 변경
     void updateBillingStatusToSuccess(@PathVariable("billingId") String billingId);
+
+    //↓방문/입원 id로 상세조회 SQL 쿼리 부르는 메서드
+    List<BillingDetailDTO> findBillingPreviewByVisitId(@PathVariable ("visitId") String visitId);
+    List<BillingDetailDTO> findBillingPreviewByAdmissionId(@PathVariable("admissionId") String admissionId);
 }
