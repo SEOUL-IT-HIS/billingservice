@@ -1,6 +1,7 @@
 package kr.co.seoulit.his.billingservice.billing.service;
 
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO;
+import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
@@ -20,23 +21,32 @@ public class BillingDetailServiceImpl implements BillingDetailService {
     public BillingDetailServiceImpl(BillingDetailRepository billingDetailRepository) {
         this.billingDetailRepository = billingDetailRepository;
     }
-
-//   전체 조회
     @Override
-    public List<BillingDetailDTO> searchBillingDetails( BillingDetailSearchDTO searchDTO) {
+    public List<BillingSummaryDTO> searchBillingDetails(
+            BillingDetailSearchDTO searchDTO
+    ) {
         return billingDetailRepository.searchBillingDetails(searchDTO);
     }
 
-    // 단일 조회
+    /**
+     * 상세보기 버튼 클릭 후 billingId 기준 상세 항목 조회
+     */
     @Override
-    public BillingDetailDTO getBillingDetailById(String billingDetailId) {
-        BillingDetailDTO billingDetailDTO = billingDetailRepository.findByBillingDetailId(billingDetailId);
-        if (billingDetailDTO == null) {
-            // 존재하지 않는 아이디 -> "존재하지 않는 식별아이디" 알림
-            throw new BusinessException(ErrorCode.BILLING_MASTER_NOT_BILLINGID);
+    public List<BillingDetailDTO> getBillingDetailsByBillingId(
+            String billingId
+    ) {
+        List<BillingDetailDTO> result =
+                billingDetailRepository.findBillingDetailsByBillingId(billingId);
+
+        if (result == null || result.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.BILLING_MASTER_NOT_BILLINGID
+            );
         }
-        return billingDetailDTO;
+
+        return result;
     }
+
 
     //상태값 변경
     @Override
