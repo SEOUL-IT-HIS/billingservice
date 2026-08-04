@@ -3,6 +3,7 @@ package kr.co.seoulit.his.billingservice.billing.controller;
 import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO;
+import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.service.BillingDetailService;
@@ -34,13 +35,14 @@ public class BillingDetailController {
                         result
                 )
         );
-    }
+    }// 환자 이름으로 검색해서 환자의 간단한 기본정보 출력 - 중복된 이름 포함
+
     @GetMapping("/{billingId}")
-    public ResponseEntity<ApiResponse<List<BillingDetailDTO>>> getBillingDetails(
+    public ResponseEntity<ApiResponse<BillingDetailResponseDTO>> getBillingDetails(
             @PathVariable String billingId
     ) {
-        List<BillingDetailDTO> result =
-                billingDetailService.getBillingDetailsByBillingId(billingId);
+        BillingDetailResponseDTO result =
+                billingDetailService.getBillingDetails(billingId);
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -48,9 +50,9 @@ public class BillingDetailController {
                         result
                 )
         );
-    }
+    }// 중복 포함 검색 결과된 리스트중 정보에 맞는 환자 찾고 진료비 상세조회
 
-    // 수납 가능 여부 및 처리 상태 확인.
+    // 수납 가능 여부 및 처리 상태 확인. 
     @GetMapping("/{billingDetailId}/billing-status")
     public ResponseEntity<ApiResponse<BillingDetailDTO>> getBillingStatus(
             @PathVariable String billingDetailId) {

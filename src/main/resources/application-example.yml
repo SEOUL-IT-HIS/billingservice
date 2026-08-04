@@ -22,3 +22,7 @@ spring:
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
+
+patient:
+  service:
+    base-url: <patient-service-base-url>

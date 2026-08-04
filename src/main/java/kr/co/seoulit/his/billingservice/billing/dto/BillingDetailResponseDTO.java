@@ -1,26 +1,29 @@
 package kr.co.seoulit.his.billingservice.billing.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BillingSummaryDTO {
+public class BillingDetailResponseDTO {
 
-    // 상세조회 키
     private String billingId;
 
-    // 환자 서비스에서 받아올 값
+    // 환자 정보
     private String patientId;
     private String patientName;
     private String tel;
     private String addr;
 
-    // 수납 DB에서 조회할 값
+    // 진료 구분용 ID
     private String visitId;
     private String admissionId;
 
+    // 진료비 합계
     private Long outpatientAmount;
     private Long inpatientAmount;
     private Long totalAmount;

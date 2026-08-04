@@ -4,7 +4,7 @@ import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
 import org.apache.ibatis.annotations.Mapper;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -12,9 +12,10 @@ import java.util.List;
 public interface BillingDetailRepository {
 
     List<BillingSummaryDTO> searchBillingDetails(BillingDetailSearchDTO searchDTO);
-    //수납 담당자가 환자 이름을 검색 + 검색 조건에 맞는 결과값으로 리스트로 반환
-    List<BillingDetailDTO> findBillingDetailsByBillingId(String billingId);
-    //검색 결과 리스트에서 해당에 맞는 환자 상세조회.
+    //수납 담당자가 검색 조건(환자 이름 등)에 맞는 수납 건을 목록으로 조회
+
+    BillingSummaryDTO findBillingSummaryByBillingId(String billingId);
+    //검색 결과 리스트에서 해당 billingId의 결제 처리 화면용 대표 정보(수납 헤더/합계) 단건 조회
 
     // 상태별 조회
     List<BillingDetailDTO> findByDetailStatus(String detailStatus);
@@ -23,12 +24,12 @@ public interface BillingDetailRepository {
     BillingDetailDTO findBillingStatusByDetailId(String billingDetailId);
 
     // 상태 변경 전 수납정보 존재 여부 확인
-    BillingDetailDTO selectBillingDetailForStatusUpdate(@PathVariable("billingId") String billingId);
+    BillingDetailDTO selectBillingDetailForStatusUpdate(@Param("billingId") String billingId);
 
     // READY 상태를 SUCCESS로 변경
-    void updateBillingStatusToSuccess(@PathVariable("billingId") String billingId);
+    void updateBillingStatusToSuccess(@Param("billingId") String billingId);
 
     //↓방문/입원 id로 상세조회 SQL 쿼리 부르는 메서드
-    List<BillingDetailDTO> findBillingPreviewByVisitId(@PathVariable ("visitId") String visitId);
-    List<BillingDetailDTO> findBillingPreviewByAdmissionId(@PathVariable("admissionId") String admissionId);
+    List<BillingDetailDTO> findBillingPreviewByVisitId(@Param("visitId") String visitId);
+    List<BillingDetailDTO> findBillingPreviewByAdmissionId(@Param("admissionId") String admissionId);
 }
