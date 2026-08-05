@@ -2,28 +2,24 @@ package kr.co.seoulit.his.billingservice.billing.dto;
 
 import lombok.*;
 
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BillingSummaryDTO {
+@Builder
 
-    // 상세조회 키
-    private String billingId;
+public class BillingSummaryDTO{
 
-    // 환자 서비스에서 받아올 값
     private String patientId;
     private String patientName;
-    private String tel;
     private String addr;
+    private String tel;
+    private String birthDate;
+    //환자 테이블에서 들고올 정보
 
-    // 수납 DB에서 조회할 값
-    private String visitId;
-    private String admissionId;
-
-    private Long outpatientAmount;
-    private Long inpatientAmount;
-    private Long totalAmount;
-
+    private String billingId;
     private String billingStatus;
+    //수납 테이블에서 들고올 정보
 }
+
+// 환자검색 -> 중복된 이름 포함해서 조회결과를 List

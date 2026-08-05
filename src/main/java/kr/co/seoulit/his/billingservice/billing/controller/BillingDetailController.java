@@ -2,11 +2,13 @@ package kr.co.seoulit.his.billingservice.billing.controller;
 
 import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO;
+import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO;
+import kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.service.BillingDetailService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,19 +16,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/billing/detail")
+@RequiredArgsConstructor
+
 public class BillingDetailController {
     private final BillingDetailService billingDetailService;
-
-    public BillingDetailController(BillingDetailService billingDetailService){
-        this.billingDetailService=billingDetailService;
-    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<BillingSummaryDTO>>> searchBillingDetails(
             @RequestParam(required = false) String patientName
     ) {
-        BillingDetailSearchDTO searchDTO =
-                new BillingDetailSearchDTO(patientName);
+        BillingDetailSearchDTO searchDTO = new BillingDetailSearchDTO();
+        searchDTO.setPatientName(patientName);
         List<BillingSummaryDTO> result=
                 billingDetailService.searchBillingDetails(searchDTO);
         return ResponseEntity.ok(
@@ -54,7 +54,7 @@ public class BillingDetailController {
 
     // 수납 가능 여부 및 처리 상태 확인. 
     @GetMapping("/{billingDetailId}/billing-status")
-    public ResponseEntity<ApiResponse<BillingDetailDTO>> getBillingStatus(
+    public ResponseEntity<ApiResponse<BillingStatusDTO>> getBillingStatus(
             @PathVariable String billingDetailId) {
 
         return ResponseEntity.ok(
@@ -66,7 +66,7 @@ public class BillingDetailController {
     }
     // READY 상태를 SUCCESS로 변경 - 상태값 변경
     @PatchMapping("/{billingId}/billing-status")
-    public ResponseEntity<ApiResponse<BillingDetailDTO>>updateBillingStatus(
+    public ResponseEntity<ApiResponse<Void>>updateBillingStatus(
             @PathVariable String billingId){
         billingDetailService.updateBillingStatusToSuccess(billingId);
 
@@ -80,20 +80,22 @@ public class BillingDetailController {
 
 //    외래/입원 id를 기준으로 상세조회- 환자의 이의제기를 납득시킬 만한 상세 조회
     @GetMapping("/preview/visit/{visitId}")
-    public ResponseEntity<ApiResponse<List<BillingDetailDTO>>>previewVistiId(
+    public ResponseEntity<ApiResponse<List<BillingDetailItemDTO>>>previewVistiId(
             @PathVariable String visitId){
-        List<BillingDetailDTO> billingDetails=
+        List<BillingDetailItemDTO> billingDetails=
         billingDetailService.getVisitBillingPreview(visitId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.OK.getMessage(), billingDetails));
     }
     @GetMapping("/preview/admission/{admissionId}")
-    public ResponseEntity<ApiResponse<List<BillingDetailDTO>>>previewAdmissionId(
+    public ResponseEntity<ApiResponse<List<BillingDetailItemDTO>>>previewAdmissionId(
             @PathVariable String admissionId)
     {
-        List<BillingDetailDTO> billingDetails=
+        List<BillingDetailItemDTO> billingDetails=
                 billingDetailService.getAdmissionBillingPreview(admissionId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.OK.getMessage(), billingDetails));
     }
+
+
 
 
 

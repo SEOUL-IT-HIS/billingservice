@@ -88,7 +88,7 @@
     <!-- ========================================================= -->
     <select id="findBillingSummaryByBillingId"
             parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO">
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO">
 
         SELECT
             b.billing_id       AS billingId,
@@ -137,7 +137,7 @@
 
     <select id="findBillingPreviewByVisitId"
             parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
 
         <include refid="billingPreviewSelect"/>
 
@@ -156,7 +156,7 @@
 
     <select id="findBillingPreviewByAdmissionId"
             parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
 
         <include refid="billingPreviewSelect"/>
 
@@ -175,7 +175,7 @@
 
     <select id="findBillingStatusByDetailId"
             parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO">
 
         SELECT
             bd.billing_detail_id AS billingDetailId,
@@ -195,7 +195,7 @@
 
     <select id="selectBillingDetailForStatusUpdate"
             parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO">
 
         SELECT
             b.billing_id         AS billingId,

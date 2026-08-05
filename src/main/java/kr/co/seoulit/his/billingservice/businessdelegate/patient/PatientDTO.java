@@ -1,4 +1,4 @@
-package kr.co.seoulit.his.billingservice.client.patient;
+package kr.co.seoulit.his.billingservice.businessdelegate.patient;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,4 +13,5 @@ public class PatientDTO {
     private String patientName;
     private String tel;
     private String addr;
+    //환자 서비스 정보 - SQL 아닌 patientBusinessDelegate REST 호출로 채움
 }

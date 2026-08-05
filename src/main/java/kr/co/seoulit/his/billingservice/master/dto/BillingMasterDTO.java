@@ -2,7 +2,7 @@ package kr.co.seoulit.his.billingservice.master.dto;
 
 import lombok.*;
 
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
 
 @Getter
