@@ -22,3 +22,6 @@ spring.jpa.open-in-view=true
 
 mybatis.configuration.map-underscore-to-camel-case=true
 mybatis.mapper-locations=classpath:/mapper/*.xml
+
+# Patient service (REST)
+patient.service.base-url=<patient_service_base_url>

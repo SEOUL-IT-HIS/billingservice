@@ -1,126 +1,229 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository">
 
-<!--진료비 상세 전체 조회-->
-<select id="findAllBillingDetails"
-        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+    <!-- ========================================================= -->
+    <!-- 공통: BILLING + BILLING_DETAIL + BILLING_MASTER 조인       -->
+    <!-- ========================================================= -->
+
+    <sql id="billingPreviewSelect">
+
+        SELECT
+            b.billing_id                 AS billingId,
+            b.patient_id                 AS patientId,
+            b.visit_id                   AS visitId,
+            b.admission_id               AS admissionId,
+            b.billing_status             AS billingStatus,
+
+            bd.billing_detail_id         AS billingDetailId,
+            bd.billing_master_id         AS billingMasterId,
+            bd.source_service_code       AS sourceServiceCode,
+            bd.source_record_id          AS sourceRecordId,
+            bd.quantity                  AS quantity,
+            bd.unit_price                AS unitPrice,
+            bd.amount                    AS amount,
+            bd.detail_status             AS detailStatus,
+            bd.occurred_at               AS occurredAt,
+            bd.created_at                AS createdAt,
+            bd.updated_at                AS updatedAt,
+
+            bm.fee_code                  AS feeCode,
+            bm.item_name                 AS itemName
+
+        FROM billing b
+
+                 JOIN billing_detail bd
+                      ON b.billing_id = bd.billing_id
+
+                 JOIN billing_master bm
+                      ON bd.billing_master_id = bm.billing_master_id
+
+    </sql>
+
+
+    <!-- ========================================================= -->
+    <!-- 1. 조건 검색: 수납할 방문/입원 건 찾기                     -->
+    <!-- 환자 이름/주소/전화번호는 환자서비스 REST API에서 조회.    -->
+    <!-- patientName은 서비스 레이어에서 환자서비스 조회 후 얻은    -->
+    <!-- patientIds로 변환되어 여기로 전달됨                        -->
+    <!-- ========================================================= -->
+<select id="searchBillingDetails"
+        parameterType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO">
 
     SELECT
-    BILLING_DETAIL_ID   AS billingDetailId,
-    BILLING_MASTER_ID   AS billingMasterId,
-    SOURCE_SERVICE_CODE AS sourceServiceCode,
-    SOURCE_RECORD_ID    AS sourceRecordId,
-    FEE_CODE            AS feeCode,
-    ITEM_NAME           AS itemName,
-    QUANTITY            AS quantity,
-    UNIT_PRICE          AS unitPrice,
-    AMOUNT              AS amount,
-    DETAIL_STATUS       AS detailStatus,
-    OCCURRED_AT         AS occurredAt,
-    CREATED_AT          AS createdAt,
-    UPDATED_AT          AS updatedAt
-    FROM BILLING_DETAIL
-    ORDER BY CREATED_AT DESC
+        b.billing_id     AS billingId,
+        b.patient_id     AS patientId,
+        b.billing_status AS billingStatus
+
+    FROM billing b
+
+    <where>
+
+        b.billing_status = 'READY'
+
+        <if test="patientIds != null and patientIds.size() > 0">
+            AND b.patient_id IN
+            <foreach item="pid"
+                     collection="patientIds"
+                     open="("
+                     separator=","
+                     close=")">
+                #{pid}
+            </foreach>
+        </if>
+
+    </where>
+
+    ORDER BY b.billing_id DESC
 
 </select>
 
-<!--진료비 상세 단일 조회-->
-<select id="findByBillingDetailId"
-        parameterType="string"
-        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+    <!-- ========================================================= -->
+    <!-- 1-1. billingId 기준 대표 정보(수납 헤더/합계) 단건 조회     -->
+    <!-- 상세보기 진입 시 헤더(환자/구분ID/합계) 조회용             -->
+    <!-- ========================================================= -->
+    <select id="findBillingSummaryByBillingId"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO">
 
-    SELECT
-    BILLING_DETAIL_ID   AS billingDetailId,
-    BILLING_MASTER_ID   AS billingMasterId,
-    SOURCE_SERVICE_CODE AS sourceServiceCode,
-    SOURCE_RECORD_ID    AS sourceRecordId,
-    FEE_CODE            AS feeCode,
-    ITEM_NAME           AS itemName,
-    QUANTITY            AS quantity,
-    UNIT_PRICE          AS unitPrice,
-    AMOUNT              AS amount,
-    DETAIL_STATUS       AS detailStatus,
-    OCCURRED_AT         AS occurredAt,
-    CREATED_AT          AS createdAt,
-    UPDATED_AT          AS updatedAt
-    FROM BILLING_DETAIL
-    WHERE BILLING_DETAIL_ID = #{billingDetailId}
+        SELECT
+            b.billing_id       AS billingId,
+            b.patient_id       AS patientId,
+            b.visit_id         AS visitId,
+            b.admission_id     AS admissionId,
+            b.billing_status   AS billingStatus,
 
-</select>
+            NVL(SUM(
+                        CASE
+                            WHEN bd.billing_type = 'OUTPATIENT'
+                                THEN bd.amount
+                            ELSE 0
+                            END
+                ), 0) AS outpatientAmount,
 
-<!--진료비 상세 등록-->
-<insert id="insertBillingDetail"
-        parameterType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            NVL(SUM(
+                        CASE
+                            WHEN bd.billing_type = 'INPATIENT'
+                                THEN bd.amount
+                            ELSE 0
+                            END
+                ), 0) AS inpatientAmount,
 
-    INSERT INTO BILLING_DETAIL (
-        BILLING_DETAIL_ID,
-        BILLING_MASTER_ID,
-        SOURCE_SERVICE_CODE,
-        SOURCE_RECORD_ID,
-        FEE_CODE,
-        ITEM_NAME,
-        QUANTITY,
-        UNIT_PRICE,
-        AMOUNT,
-        DETAIL_STATUS,
-        OCCURRED_AT,
-        CREATED_AT,
-        UPDATED_AT
-    ) VALUES (
-        #{billingDetailId},
-        #{billingMasterId},
-        #{sourceServiceCode},
-        #{sourceRecordId},
-        #{feeCode},
-        #{itemName},
-        #{quantity},
-        #{unitPrice},
-        #{amount},
-        #{detailStatus},
-        #{occurredAt},
-        #{createdAt},
-        #{updatedAt}
-    )
+            NVL(SUM(bd.amount), 0) AS totalAmount
 
-</insert>
+        FROM billing b
 
-<!--수납 가능 여부 및 처리 상태 확인-->
+                 JOIN billing_detail bd
+                      ON b.billing_id = bd.billing_id
+
+        WHERE b.billing_id = #{billingId}
+
+        GROUP BY
+            b.billing_id,
+            b.patient_id,
+            b.visit_id,
+            b.admission_id,
+            b.billing_status
+
+    </select>
+
+    <!-- ========================================================= -->
+    <!-- 2-1. 방문 ID 기준 외래 진료비 상세조회                     -->
+    <!-- ========================================================= -->
+
+    <select id="findBillingPreviewByVisitId"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
+
+        <include refid="billingPreviewSelect"/>
+
+        WHERE b.visit_id = #{visitId}
+        AND b.billing_status = 'READY'
+        AND bd.detail_status = 'READY'
+
+        ORDER BY bd.occurred_at ASC
+
+    </select>
+
+
+    <!-- ========================================================= -->
+    <!-- 2-2. 입원 ID 기준 퇴원 진료비 상세조회                     -->
+    <!-- ========================================================= -->
+
+    <select id="findBillingPreviewByAdmissionId"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
+
+        <include refid="billingPreviewSelect"/>
+
+        WHERE b.admission_id = #{admissionId}
+        AND b.billing_status = 'READY'
+        AND bd.detail_status = 'READY'
+
+        ORDER BY bd.occurred_at ASC
+
+    </select>
+
+
+    <!-- ========================================================= -->
+    <!-- 3-1. 수납 가능 여부 및 처리 상태 확인 (billingDetailId 기준) -->
+    <!-- ========================================================= -->
+
     <select id="findBillingStatusByDetailId"
-        parameterType="string"
-        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO">
 
-    SELECT
-    BILLING_DETAIL_ID AS billingDetailId,
-    DETAIL_STATUS     AS detailStatus
-    FROM BILLING_DETAIL
-    WHERE BILLING_DETAIL_ID = #{billingDetailId}
+        SELECT
+            bd.billing_detail_id AS billingDetailId,
+            bd.billing_id        AS billingId,
+            bd.detail_status     AS detailStatus
+
+        FROM billing_detail bd
+
+        WHERE bd.billing_detail_id = #{billingDetailId}
 
     </select>
-<!--상태 변경 전 수납정보 존재 여부 확인-->
+
+
+    <!-- ========================================================= -->
+    <!-- 3-2. 결제 전 수납정보 존재 및 READY 상태 확인 (billingId 기준) -->
+    <!-- ========================================================= -->
+
     <select id="selectBillingDetailForStatusUpdate"
-        parameterType="string"
-        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailDTO">
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO">
 
-    SELECT
-    BILLING_DETAIL_ID AS billingDetailId,
-    DETAIL_STATUS     AS detailStatus
-    FROM BILLING_DETAIL
-    WHERE BILLING_DETAIL_ID = #{billingId}
+        SELECT
+            b.billing_id         AS billingId,
+            b.billing_status     AS billingStatus
+
+        FROM billing b
+
+        WHERE b.billing_id = #{billingId}
+          AND b.billing_status = 'READY'
 
     </select>
 
-<!--상태 변경 -->
+
+    <!-- ========================================================= -->
+    <!-- 3-3. 결제 처리: READY → SUCCESS                            -->
+    <!-- ========================================================= -->
+
     <update id="updateBillingStatusToSuccess"
             parameterType="string">
 
         UPDATE billing
+
         SET billing_status = 'SUCCESS',
             updated_at = CURRENT_TIMESTAMP
+
         WHERE billing_id = #{billingId}
           AND billing_status = 'READY'
 
     </update>
-
 
 </mapper>
