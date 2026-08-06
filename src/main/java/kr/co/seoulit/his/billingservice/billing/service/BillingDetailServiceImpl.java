@@ -74,19 +74,27 @@ public class BillingDetailServiceImpl implements BillingDetailService {
      * 상세보기 버튼 클릭 후 billingId 기준 상세 항목 조회
      */
     @Override
-    public BillingDetailResponseDTO getBillingDetails(String billingId){
+    public BillingDetailResponseDTO getBillingDetails(String billingId) {
+
+        // billingId에 해당하는 수납 및 진료비 요약 정보 조회
         BillingDetailResponseDTO detail =
                 billingDetailRepository.findBillingSummaryByBillingId(billingId);
-                //해당 수납 건의 요약 진료비 항목 조회 (billing_detail이 없으면 null)
-        if(detail==null){
-            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);}
 
-        PatientDTO patient=
+        // 해당 수납 건이 존재하지 않으면 예외 처리
+        if (detail == null) {
+            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        }
+
+        // 수납 데이터의 patientId로 환자 서비스 조회
+        PatientDTO patient =
                 patientBusinessDelegate.getPatientById(detail.getPatientId());
-        if (patient == null) {
-            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);}
-        //환자 서비스에서 환자 정보 조회
 
+        // 환자 정보가 존재하지 않으면 예외 처리
+        if (patient == null) {
+            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
+        }
+
+        // 환자 서비스에서 받은 정보를 상세 응답 DTO에 결합
         detail.setPatientName(patient.getPatientName());
         detail.setTel(patient.getTel());
         detail.setAddr(patient.getAddr());

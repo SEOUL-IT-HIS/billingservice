@@ -10,6 +10,7 @@ import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.service.BillingDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/billing/detail")
 @RequiredArgsConstructor
+@Validated
 
 public class BillingDetailController {
     private final BillingDetailService billingDetailService;
