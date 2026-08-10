@@ -23,6 +23,7 @@ public enum ErrorCode {
     BILLING_DEFAULT_PRICE_INVALID(HttpStatus.BAD_REQUEST, "기본 단가는 0원 이상이어야 합니다."
     ),
     BILLING_NOT_FOUND(HttpStatus.NOT_FOUND, "수납 정보를 찾을 수 없습니다."),
+    BILLING_VISIT_OR_ADMISSION_ID_REQUIRED(HttpStatus.BAD_REQUEST, "방문 ID 또는 입원 ID 중 하나는 필수입니다."),
 
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND,"환자 정보를 찾을 수 없습니다."),
 

@@ -10,6 +10,7 @@ import kr.co.seoulit.his.billingservice.businessdelegate.patient.PatientDTO;
 import kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,18 +22,11 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class BillingDetailServiceImpl implements BillingDetailService {
 
     private final BillingDetailRepository billingDetailRepository;
     private final PatientBusinessDelegate patientBusinessDelegate;
-
-    public BillingDetailServiceImpl(
-            BillingDetailRepository billingDetailRepository,
-            PatientBusinessDelegate patientBusinessDelegate
-    ) {
-        this.billingDetailRepository = billingDetailRepository;
-        this.patientBusinessDelegate = patientBusinessDelegate;
-    }
 
     @Override
     public List<BillingSummaryDTO> searchBillingDetails(
