@@ -99,7 +99,7 @@
 
             NVL(SUM(
                         CASE
-                            WHEN bd.billing_type = 'OUTPATIENT'
+                            WHEN b.visit_id IS NOT NULL
                                 THEN bd.amount
                             ELSE 0
                             END
@@ -107,7 +107,7 @@
 
             NVL(SUM(
                         CASE
-                            WHEN bd.billing_type = 'INPATIENT'
+                            WHEN b.admission_id IS NOT NULL
                                 THEN bd.amount
                             ELSE 0
                             END
@@ -225,78 +225,5 @@
           AND billing_status = 'READY'
 
     </update>
-
-    <insert id="insertBillingDetail"
-            parameterType="kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO">
-         insert into billing_detail(
-             billing_detail_id,
-             billing_id,
-             billing_master_id,
-             source_service_code,
-             source_record_id,
-             quantity,
-             amount,
-             detail_status,
-             occurred_at,
-             created_at
-             )
-         values(
-                #{billingDetailId},
-                #{billingId},
-                #{billingMasterId},
-                #{sourceServiceCode},
-                #{sourceRecordId},
-                #{quantity},
-                #{amount},
-                'READY',
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-               )
-    </insert>
-
-    <insert id="insertBilling"
-            parameterType="kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO">
-
-        INSERT INTO billing (
-            billing_id,
-            patient_id,
-            visit_id,
-            admission_id,
-            billing_status,
-            created_at
-        )
-        VALUES (
-                   #{billingId},
-                   #{patientId},
-                   #{visitId},
-                   #{admissionId},
-                   'READY',
-                   CURRENT_TIMESTAMP
-               )
-
-    </insert>
-
-    <select id="findBillingIdByAdmissionId"
-            parameterType="String"
-            resultType="String">
-
-        SELECT billing_id
-        FROM billing
-        WHERE admission_id = #{admissionId}
-          AND billing_status = 'READY'
-
-    </select>
-
-    <select id="findBillingIdByVisitId"
-            parameterType="String"
-            resultType="String">
-
-        SELECT billing_id
-        FROM billing
-        WHERE visit_id = #{visitId}
-          AND billing_status = 'READY'
-
-    </select>
-
 
 </mapper>
