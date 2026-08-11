@@ -23,8 +23,10 @@ public enum ErrorCode {
     BILLING_DEFAULT_PRICE_INVALID(HttpStatus.BAD_REQUEST, "기본 단가는 0원 이상이어야 합니다."
     ),
     BILLING_NOT_FOUND(HttpStatus.NOT_FOUND, "수납 정보를 찾을 수 없습니다."),
+    BILLING_VISIT_OR_ADMISSION_ID_REQUIRED(HttpStatus.BAD_REQUEST, "방문 ID 또는 입원 ID 중 하나는 필수입니다."),
 
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND,"환자 정보를 찾을 수 없습니다."),
+    PATIENT_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "환자 서비스와 통신할 수 없습니다. 잠시 후 다시 시도해주세요."),
 
     BILLING_DATE_FORMAT_INVALID(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않습니다. (예: yyyy-MM-dd 또는 yyyy-MM-dd'T'HH:mm:ss)"),
     // <--생성일시,수정일시는 어느 서비스던 포함돼서 진정한 공통이라고 말할수있다.-->

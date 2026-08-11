@@ -99,7 +99,7 @@
 
             NVL(SUM(
                         CASE
-                            WHEN bd.billing_type = 'OUTPATIENT'
+                            WHEN b.visit_id IS NOT NULL
                                 THEN bd.amount
                             ELSE 0
                             END
@@ -107,7 +107,7 @@
 
             NVL(SUM(
                         CASE
-                            WHEN bd.billing_type = 'INPATIENT'
+                            WHEN b.admission_id IS NOT NULL
                                 THEN bd.amount
                             ELSE 0
                             END

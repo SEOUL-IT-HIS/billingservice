@@ -25,6 +25,7 @@ public class BillingDetailResponseDTO{
     private String patientName;
     private String tel;
     private String addr;
+    private String birthDate;
     //환자 서비스 정보 - SQL 아닌 patientBusinessDelegate REST 호출로 채움
     //환자 진료비 상세조회(메인)
 }

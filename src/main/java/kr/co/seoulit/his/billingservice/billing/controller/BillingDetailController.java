@@ -12,9 +12,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 
+@Tag(name = "Billing Detail", description = "진료비 상세조회 및 수납처리 API")
 @RestController
 @RequestMapping("/api/billing/detail")
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ import java.util.List;
 public class BillingDetailController {
     private final BillingDetailService billingDetailService;
 
+    @Operation(summary = "진료비 검색", description = "환자명으로 진료비 정보를 검색합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<BillingSummaryDTO>>> searchBillingDetails(
             @RequestParam(required = false) String patientName
@@ -41,8 +45,7 @@ public class BillingDetailController {
 
     @GetMapping("/{billingId}")
     public ResponseEntity<ApiResponse<BillingDetailResponseDTO>> getBillingDetails(
-            @PathVariable String billingId
-    ) {
+            @PathVariable String billingId) {
         BillingDetailResponseDTO result =
                 billingDetailService.getBillingDetails(billingId);
 
@@ -79,7 +82,7 @@ public class BillingDetailController {
                 )
         );
     }
-
+    
 //    외래/입원 id를 기준으로 상세조회- 환자의 이의제기를 납득시킬 만한 상세 조회
     @GetMapping("/preview/visit/{visitId}")
     public ResponseEntity<ApiResponse<List<BillingDetailItemDTO>>>previewVistiId(
@@ -96,10 +99,4 @@ public class BillingDetailController {
                 billingDetailService.getAdmissionBillingPreview(admissionId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.OK.getMessage(), billingDetails));
     }
-
-
-
-
-
-
 }
