@@ -26,7 +26,7 @@ import java.util.List;
 public class BillingDetailController {
     private final BillingDetailService billingDetailService;
 
-    @Operation(summary = "진료비 검색", description = "환자명으로 진료비 정보를 검색합니다.")
+    @Operation(summary = "환자 검색", description = "수납받을 환자를 검색합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<BillingSummaryDTO>>> searchBillingDetails(
             @RequestParam(required = false) String patientName
@@ -43,6 +43,7 @@ public class BillingDetailController {
         );
     }// 환자 이름으로 검색해서 환자의 간단한 기본정보 출력 - 중복된 이름 포함
 
+    @Operation(summary = "환자 진료비 상세조회", description = "수납받을 환자의 진료비 상세조회")
     @GetMapping("/{billingId}")
     public ResponseEntity<ApiResponse<BillingDetailResponseDTO>> getBillingDetails(
             @PathVariable String billingId) {
@@ -77,7 +78,7 @@ public class BillingDetailController {
 
         return ResponseEntity.ok(
                 ApiResponse.success(
-                        SuccessCode.OK.getMessage(),
+
                         null
                 )
         );
