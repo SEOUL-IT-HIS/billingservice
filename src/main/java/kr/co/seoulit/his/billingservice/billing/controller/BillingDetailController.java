@@ -1,13 +1,10 @@
 package kr.co.seoulit.his.billingservice.billing.controller;
 
+import kr.co.seoulit.his.billingservice.billing.dto.*;
 import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.service.BillingDetailService;
+import kr.co.seoulit.his.billingservice.billing.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -25,6 +22,7 @@ import java.util.List;
 
 public class BillingDetailController {
     private final BillingDetailService billingDetailService;
+    private final PaymentService paymentService;
 
     @Operation(summary = "환자 검색", description = "수납받을 환자를 검색합니다.")
     @GetMapping
@@ -70,12 +68,11 @@ public class BillingDetailController {
                 )
         );
     }
-    // READY 상태를 SUCCESS로 변경 - 상태값 변경
-    @PatchMapping("/{billingId}/billing-status")
-    public ResponseEntity<ApiResponse<Void>>updateBillingStatus(
-            @PathVariable String billingId){
-        billingDetailService.updateBillingStatusToSuccess(billingId);
-
+    @PostMapping("/payment")
+    public ResponseEntity<ApiResponse<Void>> processPayment(
+            @RequestBody PaymentRequestDTO request
+    ){
+        paymentService.processPayment(request);
         return ResponseEntity.ok(
                 ApiResponse.success(
 
