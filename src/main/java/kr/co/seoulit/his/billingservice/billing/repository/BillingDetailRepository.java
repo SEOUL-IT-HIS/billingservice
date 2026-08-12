@@ -26,8 +26,8 @@ public interface BillingDetailRepository {
     // 상태 변경 전 수납정보 존재 여부 확인
     BillingStatusDTO selectBillingDetailForStatusUpdate(@Param("billingId") String billingId);
 
-    // READY 상태를 SUCCESS로 변경
-    void updateBillingStatusToSuccess(@Param("billingId") String billingId);
+    // READY 상태를 SUCCESS로 변경, 반환값은 실제로 변경된 행 수(0이면 이미 처리된 건)
+    int updateBillingStatusToSuccess(@Param("billingId") String billingId);
 
     //↓방문/입원 id로 상세조회 SQL 쿼리 부르는 메서드
     List<BillingDetailItemDTO> findBillingPreviewByVisitId(@Param("visitId") String visitId);
