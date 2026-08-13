@@ -5,6 +5,7 @@ import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
+import kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -31,4 +32,7 @@ public interface BillingDetailRepository {
     //↓방문/입원 id로 상세조회 SQL 쿼리 부르는 메서드
     List<BillingDetailItemDTO> findBillingPreviewByVisitId(@Param("visitId") String visitId);
     List<BillingDetailItemDTO> findBillingPreviewByAdmissionId(@Param("admissionId") String admissionId);
+
+    // 타 서비스에서 넘어온 수납 항목을 billing_detail에 등록
+    void insertBillingDetail(BillingChargeResponseDTO billingChargeResponseDTO);
 }

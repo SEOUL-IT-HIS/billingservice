@@ -58,18 +58,8 @@ public class BillingChargeServiceImpl implements BillingChargeService {
 
         String billingId = billing.getBillingId();
 
-        BillingDetailEntity billingDetail = BillingDetailEntity.builder()
-                .billingDetailId(UUID.randomUUID().toString())
-                .billingId(billingId)
-                .billingMasterId(billingMaster.getBillingMasterId())
-                .sourceServiceCode(billingChargeRequestDTO.getSourceServiceCode())
-                .sourceRecordId(billingChargeRequestDTO.getSourceRecordId())
-                .quantity(Integer.valueOf(billingChargeRequestDTO.getQuantity()))
-                .amount(Long.valueOf(billingChargeRequestDTO.getAmount()))
-                .detailStatus("READY")
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        billingDetailJpaRepository.save(billingDetail);
+        billingCharge.setBillingId(billingId);
+        billingCharge.setBillingDetailId(UUID.randomUUID().toString());
+        billingDetailRepository.insertBillingDetail(billingCharge);
     }
 }

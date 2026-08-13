@@ -80,7 +80,8 @@ public class BillingDetailController {
                 )
         );
     }
-    
+    //결제 화면 - 팝업. 누르면 billing_status,payment_status 를 ready->success
+
 //    외래/입원 id를 기준으로 상세조회- 환자의 이의제기를 납득시킬 만한 상세 조회
     @GetMapping("/preview/visit/{visitId}")
     public ResponseEntity<ApiResponse<List<BillingDetailItemDTO>>>previewVistiId(
