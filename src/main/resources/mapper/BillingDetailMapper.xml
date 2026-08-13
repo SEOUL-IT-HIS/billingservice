@@ -254,49 +254,5 @@
                )
     </insert>
 
-    <insert id="insertBilling"
-            parameterType="kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO">
-
-        INSERT INTO billing (
-            billing_id,
-            patient_id,
-            visit_id,
-            admission_id,
-            billing_status,
-            created_at
-        )
-        VALUES (
-                   #{billingId},
-                   #{patientId},
-                   #{visitId},
-                   #{admissionId},
-                   'READY',
-                   CURRENT_TIMESTAMP
-               )
-
-    </insert>
-
-    <select id="findBillingIdByAdmissionId"
-            parameterType="String"
-            resultType="String">
-
-        SELECT billing_id
-        FROM billing
-        WHERE admission_id = #{admissionId}
-          AND billing_status = 'READY'
-
-    </select>
-
-    <select id="findBillingIdByVisitId"
-            parameterType="String"
-            resultType="String">
-
-        SELECT billing_id
-        FROM billing
-        WHERE visit_id = #{visitId}
-          AND billing_status = 'READY'
-
-    </select>
-
 
 </mapper>

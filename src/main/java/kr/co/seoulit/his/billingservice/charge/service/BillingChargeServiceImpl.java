@@ -74,6 +74,7 @@ public class BillingChargeServiceImpl implements BillingChargeService {
 
         String billingId = billing.getBillingId();
 
+        billingCharge.setBillingId(billingId);
         billingCharge.setBillingDetailId(UUID.randomUUID().toString());
         billingDetailRepository.insertBillingDetail(billingCharge);
     }

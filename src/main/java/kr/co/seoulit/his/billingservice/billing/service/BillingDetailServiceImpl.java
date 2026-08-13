@@ -32,6 +32,7 @@ public class BillingDetailServiceImpl implements BillingDetailService {
     public List<BillingSummaryDTO> searchBillingDetails(
             BillingDetailSearchDTO searchDTO) {
         String patientName = searchDTO.getPatientName();
+
         if (patientName != null && !patientName.isBlank()) {
             List<PatientDTO> patients = patientBusinessDelegate.searchPatientsByName(patientName);
             if (patients.isEmpty()) {
