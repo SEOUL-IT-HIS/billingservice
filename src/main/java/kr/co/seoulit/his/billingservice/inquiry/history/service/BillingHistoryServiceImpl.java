@@ -1,70 +1,82 @@
 package kr.co.seoulit.his.billingservice.inquiry.history.service;
 
-import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO;
-import kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO;
 import kr.co.seoulit.his.billingservice.businessdelegate.patient.PatientBusinessDelegate;
 import kr.co.seoulit.his.billingservice.businessdelegate.patient.PatientDTO;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySearchDTO;
+import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySummaryDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.repository.BillingHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 
-public class BillingHistoryServiceImpl implements BillingHistoryService{
+public class BillingHistoryServiceImpl implements BillingHistoryService {
 
     private final BillingHistoryRepository billingHistoryRepository;
     private final PatientBusinessDelegate patientBusinessDelegate;
 
+    //환자 이름을 검색해서 리스트로 반환
     @Override
-    public List<BillingHistoryDTO> getBillinghistoryByPatient(String patientId){
-             List<BillingHistoryDTO> histories=
-                     billingHistoryRepository.findBillingHistoryByPatientId(patientId);
-             // Billing+Payment 테이블에서 환자의 수납 이력 조회
-             if(histories.isEmpty()){return List.of();}
-             return histories;
-    }
+    public List<BillingHistorySummaryDTO> searchBillingHistoryByName(BillingHistorySearchDTO searchDTO) {
+        String patientName = searchDTO.getPatientName();
+        if (patientName != null && !patientName.isBlank()) {
+            List<PatientDTO> patients = patientBusinessDelegate.searchPatientsByName(patientName);
+            if (patients.isEmpty()) {
+                return List.of();
+            }
 
-    @Override
-    public List<BillingHistoryDTO> getBillingHistory(
-            BillingHistorySearchDTO searchDTO
-    ) {
-        String patientName= searchDTO.getPatientName();
-        if(patientName.isEmpty()){return List.of();}
+            searchDTO.setPatientIds(
+                    patients.stream().map(PatientDTO::getPatientId).toList());
+        }
 
-        List<PatientDTO> patients=patientClient.searchPatientsByName(patientName);
-        searchDTO.setPatientIds(
-                         patients.stream()
-                        .map(PatientDTO::getPatientId)
-                        .toList()
-        );// 환자 이름으로 환자 조회 후 환자 ID 리스트로 변환
+        List<BillingHistorySummaryDTO> summaries = billingHistoryRepository.searchBillingHistory(searchDTO);
+        if (summaries.isEmpty()) {
+            return summaries;
+        }
+        //리스트로 하기전에 결제 상태가 완료된 것만 Query로 추출해서 summaries에 담는다.
 
-        List<BillingHistoryDTO> histories=billingHistoryRepository.findBillingHistory(searchDTO);
-        // Billing+Payment 테이블에서 환자의 수납 이력 조회
-
-        Map<String, PatientDTO> patientById=
-                patientBusinessDelegate
-                        .getPatientById(patientIds)
-                        .stream()
-                        .collect(Collectors
-                                .toMap(PatientDTO::getPatientId, Function.identity())));
+        List<String> patientIds = summaries
+                .stream()
+                .map(BillingHistorySummaryDTO::getPatientId)
+                .distinct()
+                .toList();
+        Map<String, PatientDTO> patientById = patientBusinessDelegate.getPatientsById(patientIds)
+                .stream().collect(Collectors.toMap(PatientDTO::getPatientId, Function.identity())
+                );
         summaries.forEach(summary -> {
             PatientDTO patient = patientById.get(summary.getPatientId());
             if (patient != null) {
                 summary.setPatientName(patient.getPatientName());
                 summary.setTel(patient.getTel());
-                summary.setAddr(patient.getAddr());}
+                summary.setAddr(patient.getAddr());
+            }
         });
 
         return summaries;
+    }
 
-        
+    @Override
+    public List<BillingHistoryDTO> getBillinghistoryByPatient(String patientId) {
 
+        List<BillingHistoryDTO> histories = billingHistoryRepository.findBillingHistoryByPatientId(patientId);
+
+        if (histories == null) { return List.of(); }
+
+        PatientDTO patient = patientBusinessDelegate.getPatientById(patientId);
+
+        if (patient == null) { throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND); }
+
+        histories.forEach(history -> history.setPatientName(patient.getPatientName()));
+
+        return histories;
     }
 }
