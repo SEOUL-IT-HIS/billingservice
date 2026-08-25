@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -30,15 +29,17 @@ public class PatientBusinessDelegate {
         this.patientServiceBaseUrl = patientServiceBaseUrl;
     }
 
-    // TODO: 이름 검색 쿼리 파라미터명(patientName) 실제 스펙과 일치하는지 확인 필요
     public List<PatientDTO> searchPatientsByName(String patientName) {
         try {
-            PatientDTO[] patients = restTemplate.getForObject(
-                    patientServiceBaseUrl + "/api/patient?patientName={patientName}",
-                    PatientDTO[].class,
+            ResponseEntity<ApiResponse<List<PatientDTO>>> response = restTemplate.exchange(
+                    patientServiceBaseUrl + "/api/patient/list?patientName={patientName}",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<ApiResponse<List<PatientDTO>>>() {},
                     patientName
             );
-            return patients == null ? List.of() : Arrays.asList(patients);
+            ApiResponse<List<PatientDTO>> body = response.getBody();
+            return body == null || body.getData() == null ? List.of() : body.getData();
         } catch (RestClientException e) {
             log.error("환자 서비스 이름 검색 실패 (patientName={}): {}", patientName, e.getMessage(), e);
             throw new BusinessException(ErrorCode.PATIENT_SERVICE_UNAVAILABLE);
@@ -63,18 +64,22 @@ public class PatientBusinessDelegate {
         }
     }
 
-    // TODO: 다건 조회 쿼리 파라미터명(patientIds) 및 콤마 구분 방식이 실제 스펙과 일치하는지 확인 필요
+    // TODO: patient-service의 /api/patient/list 가 patientIds 파라미터로 필터링을 지원하지 않아
+    //  현재는 전체 환자 목록을 받아온다. patient-service 쪽에 patientIds 필터 지원을 요청해야 함.
     public List<PatientDTO> getPatientsById(List<String> patientIds) {
         if (patientIds == null || patientIds.isEmpty()) {
             return List.of();
         }
         try {
-            PatientDTO[] patients = restTemplate.getForObject(
-                    patientServiceBaseUrl + "/api/patient?patientIds={patientIds}",
-                    PatientDTO[].class,
+            ResponseEntity<ApiResponse<List<PatientDTO>>> response = restTemplate.exchange(
+                    patientServiceBaseUrl + "/api/patient/list?patientIds={patientIds}",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<ApiResponse<List<PatientDTO>>>() {},
                     String.join(",", patientIds)
             );
-            return patients == null ? List.of() : Arrays.asList(patients);
+            ApiResponse<List<PatientDTO>> body = response.getBody();
+            return body == null || body.getData() == null ? List.of() : body.getData();
         } catch (RestClientException e) {
             log.error("환자 서비스 다건 조회 실패 (patientIds={}): {}", patientIds, e.getMessage(), e);
             throw new BusinessException(ErrorCode.PATIENT_SERVICE_UNAVAILABLE);
