@@ -226,4 +226,39 @@
 
     </update>
 
+
+    <!-- ========================================================= -->
+    <!-- 4. 타 서비스에서 넘어온 진료비 항목을 billing_detail에 등록  -->
+    <!-- ========================================================= -->
+
+    <insert id="insertBillingDetail"
+            parameterType="kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO">
+
+        INSERT INTO billing_detail (
+            billing_detail_id,
+            billing_id,
+            billing_master_id,
+            source_service_code,
+            source_record_id,
+            quantity,
+            amount,
+            detail_status,
+            occurred_at,
+            created_at
+        )
+        VALUES (
+            #{billingDetailId},
+            #{billingId},
+            #{billingMasterId},
+            #{sourceServiceCode},
+            #{sourceRecordId},
+            #{quantity},
+            #{amount},
+            'READY',
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+
+    </insert>
+
 </mapper>

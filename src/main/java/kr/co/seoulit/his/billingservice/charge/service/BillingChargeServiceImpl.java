@@ -1,10 +1,10 @@
 package kr.co.seoulit.his.billingservice.charge.service;
 
-import kr.co.seoulit.his.billingservice.billing.entity.BillingDetailEntity;
 import kr.co.seoulit.his.billingservice.billing.entity.BillingEntity;
-import kr.co.seoulit.his.billingservice.billing.repository.BillingDetailJpaRepository;
+import kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository;
 import kr.co.seoulit.his.billingservice.billing.repository.BillingRepository;
 import kr.co.seoulit.his.billingservice.charge.dto.BillingChargeRequestDTO;
+import kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.master.entity.BillingMasterEntity;
@@ -22,7 +22,7 @@ import java.util.UUID;
 public class BillingChargeServiceImpl implements BillingChargeService {
 
     private final BillingMasterRepository billingMasterRepository;
-    private final BillingDetailJpaRepository billingDetailJpaRepository;
+    private final BillingDetailRepository billingDetailRepository;
     private final BillingRepository billingRepository;
 
     @Override
@@ -37,6 +37,20 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         // feeCode로 수납기준정보(billing_master)를 조회해 billingMasterId를 확보
         BillingMasterEntity billingMaster = billingMasterRepository.findByFeeCode(billingChargeRequestDTO.getFeeCode())
                 .orElseThrow(() -> new BusinessException(ErrorCode.BILLING_FEE_CODE_NOT_FOUND));
+
+        // 요청 DTO(타서비스 입력)를 내부 저장용 DTO로 변환하면서 billingMasterId를 채움
+        BillingChargeResponseDTO billingCharge = BillingChargeResponseDTO.builder()
+                .patientId(billingChargeRequestDTO.getPatientId())
+                .visitId(visitId)
+                .admissionId(admissionId)
+                .sourceServiceCode(billingChargeRequestDTO.getSourceServiceCode())
+                .sourceRecordId(billingChargeRequestDTO.getSourceRecordId())
+                .feeCode(billingChargeRequestDTO.getFeeCode())
+                .itemName(billingChargeRequestDTO.getItemName())
+                .quantity(billingChargeRequestDTO.getQuantity())
+                .amount(billingChargeRequestDTO.getAmount())
+                .billingMasterId(billingMaster.getBillingMasterId())
+                .build();
 
         BillingEntity billing = visitId != null
                 ? billingRepository.findByVisitId(visitId).orElse(null)
@@ -62,4 +76,5 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         billingCharge.setBillingDetailId(UUID.randomUUID().toString());
         billingDetailRepository.insertBillingDetail(billingCharge);
     }
+
 }
