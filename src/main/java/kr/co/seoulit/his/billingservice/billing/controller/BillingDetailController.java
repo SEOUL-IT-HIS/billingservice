@@ -27,8 +27,7 @@ public class BillingDetailController {
     @Operation(summary = "환자 검색", description = "수납받을 환자를 검색합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<BillingSummaryDTO>>> searchBillingDetails(
-            @RequestParam(required = false) String patientName
-    ) {
+            @RequestParam(required = false) String patientName) {
         BillingDetailSearchDTO searchDTO = new BillingDetailSearchDTO();
         searchDTO.setPatientName(patientName);
         List<BillingSummaryDTO> result=

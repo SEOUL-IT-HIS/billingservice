@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.seoulit.his.billingservice.inquiry.history.repository.BillingHistoryRepository">
+
+    <!-- ========================================================= -->
+    <!-- 1. 환자 이름/ID 기준 수납 이력 검색                        -->
+    <!-- patientName은 서비스 레이어에서 환자서비스 조회 후 얻은    -->
+    <!-- patientIds로 변환되어 여기로 전달됨.                       -->
+    <!-- patientName/tel/addr는 환자서비스 REST 호출로 채워지므로   -->
+    <!-- 여기서는 조회하지 않음.                                    -->
+    <!-- ========================================================= -->
+    <select id="searchBillingHistory"
+            parameterType="kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySearchDTO"
+            resultType="kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySummaryDTO">
+
+        SELECT
+            b.billing_id            AS billingId,
+            b.patient_id            AS patientId,
+
+            CASE
+                WHEN b.visit_id IS NOT NULL THEN 'OUTPATIENT'
+                ELSE 'INPATIENT'
+            END AS billingType,
+
+            b.billing_status        AS billingStatus,
+
+            p.payment_id            AS paymentId,
+            p.payment_amount        AS paymentAmount,
+            p.payment_method_code   AS paymentMethod,
+            p.payment_at            AS paymentAt
+
+        FROM billing b
+
+        JOIN payment p
+            ON p.billing_id = b.billing_id
+           AND p.payment_status = 'APPROVED'
+
+        <where>
+
+            b.billing_status = 'SUCCESS'
+
+            <if test="patientIds != null and patientIds.size() > 0">
+                AND b.patient_id IN
+                <foreach item="pid"
+                         collection="patientIds"
+                         open="("
+                         separator=","
+                         close=")">
+                    #{pid}
+                </foreach>
+            </if>
+
+        </where>
+
+        ORDER BY b.billing_id DESC
+
+    </select>
+
+
+    <!-- ========================================================= -->
+    <!-- 2. 환자 ID 기준 수납 이력 전체 조회                        -->
+    <!-- 환자 한 명의 외래/입원 수납 건 전체(N건)를 조회.           -->
+    <!-- patientName은 서비스 레이어에서 환자서비스 조회 후 채워짐. -->
+    <!-- ========================================================= -->
+    <select id="findBillingHistoryByPatientId"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDTO">
+
+        SELECT
+            b.billing_id     AS billingId,
+            b.patient_id     AS patientId,
+
+            CASE
+                WHEN b.visit_id IS NOT NULL THEN 'OUTPATIENT'
+                ELSE 'INPATIENT'
+            END AS billingType,
+
+            NVL(SUM(bd.amount), 0) AS totalAmount,
+
+            b.billing_status AS billingStatus,
+            b.created_at     AS billingAt
+
+        FROM billing b
+
+                 JOIN billing_detail bd
+                      ON b.billing_id = bd.billing_id
+
+        WHERE b.patient_id = #{patientId}
+
+        GROUP BY
+            b.billing_id,
+            b.patient_id,
+            b.visit_id,
+            b.billing_status,
+            b.created_at
+
+        ORDER BY b.created_at DESC
+
+    </select>
+
+</mapper>
