@@ -58,7 +58,8 @@ public class BillingDetailServiceImpl implements BillingDetailService {
             if (patient != null) {
                 summary.setPatientName(patient.getPatientName());
                 summary.setTel(patient.getTel());
-                summary.setAddr(patient.getAddr());}
+                summary.setAddr(patient.getAddr());
+                summary.setBirthDate(patient.getBirthDate());}
         });
 
         return summaries;
@@ -93,6 +94,7 @@ public class BillingDetailServiceImpl implements BillingDetailService {
         detail.setPatientName(patient.getPatientName());
         detail.setTel(patient.getTel());
         detail.setAddr(patient.getAddr());
+        detail.setBirthDate(patient.getBirthDate());
 
         return detail;
     }

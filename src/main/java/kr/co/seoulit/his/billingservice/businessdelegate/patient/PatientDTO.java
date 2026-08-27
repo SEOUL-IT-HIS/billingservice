@@ -13,5 +13,6 @@ public class PatientDTO {
     private String patientName;
     private String tel;
     private String addr;
+    private String birthDate;
     //환자 서비스 정보 - SQL 아닌 patientBusinessDelegate REST 호출로 채움
 }
