@@ -16,7 +16,7 @@ import java.util.List;
 
 @Tag(name = "Billing Detail", description = "진료비 상세조회 및 수납처리 API")
 @RestController
-@RequestMapping("/api/billing/detail")
+@RequestMapping("/api/billing/payment")
 @RequiredArgsConstructor
 @Validated
 

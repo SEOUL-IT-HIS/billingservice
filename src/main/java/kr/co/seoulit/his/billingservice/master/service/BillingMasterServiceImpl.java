@@ -6,6 +6,7 @@ import kr.co.seoulit.his.billingservice.master.entity.BillingMasterEntity;
 import kr.co.seoulit.his.billingservice.master.mapper.BillingMasterMapper;
 import kr.co.seoulit.his.billingservice.master.repository.BillingMasterRepository;
 import kr.co.seoulit.his.billingservice.master.dto.BillingMasterDTO;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,7 +86,14 @@ public class BillingMasterServiceImpl implements BillingMasterService {
     // 기본값
     entity.setUseYn("Y");
     // 받아온 데이터를 entity 형태로 DB에 저장
-    BillingMasterEntity savedEntity = billingMasterRepository.save(entity);
+    BillingMasterEntity savedEntity;
+    try {
+        // saveAndFlush로 즉시 INSERT를 실행해야 유니크 제약 위반이 이 메서드 안에서(트랜잭션 커밋 시점이 아니라) 바로 발생한다
+        savedEntity = billingMasterRepository.saveAndFlush(entity);
+    } catch (DataIntegrityViolationException e) {
+        // 서비스 구분 코드+수기 코드+적용 시작일 조합이 이미 등록된 경우 (UQ_BILLING_MASTER_FEE)
+        throw new BusinessException(ErrorCode.BILLING_MASTER_DUPLICATED);
+    }
     // 저장한 데이터를 DTO로 변환해서 반환.
     return billingMasterMapper.toDto(savedEntity);
     }
