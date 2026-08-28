@@ -16,8 +16,9 @@ public class BillingHistorySummaryDTO {
 
     // 환자 서비스에서 채움
     private String patientName;
-    private String tel;
-    private String addr;
+    private String address;
+    private String addressDetail;
+    private String phoneNo;
 
     // 외래 / 입원 구분
     private String billingType;

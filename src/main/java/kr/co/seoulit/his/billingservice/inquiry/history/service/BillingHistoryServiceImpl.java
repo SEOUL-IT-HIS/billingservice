@@ -56,8 +56,9 @@ public class BillingHistoryServiceImpl implements BillingHistoryService {
             PatientDTO patient = patientById.get(summary.getPatientId());
             if (patient != null) {
                 summary.setPatientName(patient.getPatientName());
-                summary.setTel(patient.getTel());
-                summary.setAddr(patient.getAddr());
+                summary.setPhoneNo(patient.getPhoneNo());
+                summary.setAddress(patient.getAddress());
+                summary.setAddressDetail(patient.getAddressDetail());
             }
         });
 
