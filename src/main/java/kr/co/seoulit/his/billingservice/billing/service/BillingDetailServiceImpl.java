@@ -57,8 +57,9 @@ public class BillingDetailServiceImpl implements BillingDetailService {
             PatientDTO patient = patientById.get(summary.getPatientId());
             if (patient != null) {
                 summary.setPatientName(patient.getPatientName());
-                summary.setTel(patient.getTel());
-                summary.setAddr(patient.getAddr());
+                summary.setPhoneNo(patient.getPhoneNo());
+                summary.setAddress(patient.getAddress());
+                summary.setAddressDetail(patient.getAddressDetail());
                 summary.setBirthDate(patient.getBirthDate());}
         });
 
@@ -92,8 +93,9 @@ public class BillingDetailServiceImpl implements BillingDetailService {
 
         // 환자 서비스에서 받은 정보를 상세 응답 DTO에 결합
         detail.setPatientName(patient.getPatientName());
-        detail.setTel(patient.getTel());
-        detail.setAddr(patient.getAddr());
+        detail.setPhoneNo(patient.getPhoneNo());
+        detail.setAddress(patient.getAddress());
+        detail.setAddressDetail(patient.getAddressDetail());
         detail.setBirthDate(patient.getBirthDate());
 
         return detail;
