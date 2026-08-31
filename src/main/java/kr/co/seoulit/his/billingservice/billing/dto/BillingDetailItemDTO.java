@@ -1,5 +1,6 @@
 package kr.co.seoulit.his.billingservice.billing.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 @Getter
@@ -10,22 +11,18 @@ import lombok.*;
 
 public class BillingDetailItemDTO{
     private String billingId;
-    private String patientId;
+    @JsonIgnore
+    private String patientId; //환자서비스에서 patientName 조회하기 위한 내부용 값 - 응답에는 노출하지 않음
+    private String patientName;
     private String visitId;
     private String admissionId;
     private String billingStatus;
 
-    private String billingDetailId;
-    private String billingMasterId;
-    private String sourceServiceCode;
-    private String sourceRecordId;
     private String quantity;
     private String unitPrice;
     private String amount;
     private String detailStatus;
     private String occurredAt;
-    private String createdAt;
-    private String updatedAt;
 
     private String feeCode;
     private String itemName;
