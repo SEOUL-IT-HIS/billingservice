@@ -137,6 +137,7 @@ public class BillingDetailServiceImpl implements BillingDetailService {
         List<BillingDetailItemDTO> billingDetails
                 =billingDetailRepository.findBillingPreviewByVisitId(visitId);
         //service->repository->xml(sql)
+        fillPatientName(billingDetails);
         return billingDetails;
     }
     //입원id로 조회
@@ -146,7 +147,22 @@ public class BillingDetailServiceImpl implements BillingDetailService {
         List<BillingDetailItemDTO> billingDetails
                 =billingDetailRepository.findBillingPreviewByAdmissionId(admissionId);
         //service->repository->xml(sql)
+        fillPatientName(billingDetails);
         return billingDetails;
+    }
+
+    // 상세조회 항목들은 모두 같은 환자(billing) 소속이므로 환자서비스는 한 번만 호출해 이름을 채운다
+    private void fillPatientName(List<BillingDetailItemDTO> billingDetails) {
+        if (billingDetails.isEmpty()) {
+            return;
+        }
+
+        PatientDTO patient = patientBusinessDelegate.getPatientById(billingDetails.get(0).getPatientId());
+        if (patient == null) {
+            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
+        }
+
+        billingDetails.forEach(item -> item.setPatientName(patient.getPatientName()));
     }
 
 

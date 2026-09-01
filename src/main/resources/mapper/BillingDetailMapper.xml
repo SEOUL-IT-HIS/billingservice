@@ -18,17 +18,11 @@
             b.admission_id               AS admissionId,
             b.billing_status             AS billingStatus,
 
-            bd.billing_detail_id         AS billingDetailId,
-            bd.billing_master_id         AS billingMasterId,
-            bd.source_service_code       AS sourceServiceCode,
-            bd.source_record_id          AS sourceRecordId,
             bd.quantity                  AS quantity,
             bd.unit_price                AS unitPrice,
             bd.amount                    AS amount,
             bd.detail_status             AS detailStatus,
             bd.occurred_at               AS occurredAt,
-            bd.created_at                AS createdAt,
-            bd.updated_at                AS updatedAt,
 
             bm.fee_code                  AS feeCode,
             bm.item_name                 AS itemName
