@@ -99,6 +99,8 @@ public class BillingDetailServiceImpl implements BillingDetailService {
                 .admissionId(header.getAdmissionId())
                 .billingStatus(header.getBillingStatus())
                 .totalAmount(header.getTotalAmount())
+                .outpatientAmount(header.getReceptionId() != null ? header.getTotalAmount() : 0L)
+                .inpatientAmount(header.getAdmissionId() != null ? header.getTotalAmount() : 0L)
                 .patientId(patient.getPatientId())
                 .patientName(patient.getPatientName())
                 .phoneNo(patient.getPhoneNo())

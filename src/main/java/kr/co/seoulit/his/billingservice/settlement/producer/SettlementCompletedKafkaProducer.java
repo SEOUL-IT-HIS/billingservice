@@ -3,6 +3,7 @@ package kr.co.seoulit.his.billingservice.settlement.producer;
 import kr.co.seoulit.his.billingservice.settlement.dto.SettlementCompletedEventDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 // 결제 완료 시점에만 쏜다 - 병동 쪽은 이 이벤트를 받아야 퇴원 처리를 진행하기 때문.
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "app.kafka", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SettlementCompletedKafkaProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;

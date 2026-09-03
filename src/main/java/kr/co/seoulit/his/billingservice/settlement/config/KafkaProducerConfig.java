@@ -3,6 +3,7 @@ package kr.co.seoulit.his.billingservice.settlement.config;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -16,6 +17,7 @@ import java.util.Map;
 // spring-kafka 자동 설정이 만들어주는 KafkaTemplate의 제네릭 타입이 우리가 쓰는 타입과 안 맞아서
 // 직접 빈으로 정의한다.
 @Configuration
+@ConditionalOnProperty(prefix = "app.kafka", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class KafkaProducerConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
