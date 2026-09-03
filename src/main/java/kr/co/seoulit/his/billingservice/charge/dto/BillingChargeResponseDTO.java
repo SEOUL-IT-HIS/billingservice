@@ -11,8 +11,7 @@ import lombok.*;
 public class BillingChargeResponseDTO {
 
     private String billingId;
-    private String patientId;
-    private String visitId;
+    private String receptionId;
     private String admissionId;
 
     private String billingDetailId;
@@ -22,6 +21,7 @@ public class BillingChargeResponseDTO {
 
     private String feeCode;
     private String itemName;
+    private String unitPrice;
 
     private String quantity;
     private String amount;
