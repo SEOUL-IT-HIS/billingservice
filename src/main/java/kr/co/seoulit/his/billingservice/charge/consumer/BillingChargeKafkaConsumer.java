@@ -12,13 +12,15 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class BillingChargeKafkaConsumer {
+public class
+BillingChargeKafkaConsumer {
 
     private final BillingChargeService billingChargeService;
 
     @KafkaListener(
             topics = "${billing.charge.topic.exam}",
-            groupId = "${spring.kafka.consumer.group-id}"
+            groupId = "${spring.kafka.consumer.group-id}",
+            properties = "spring.json.value.default.type=kr.co.seoulit.his.billingservice.charge.dto.BillingChargeRequestDTO"
     )
     public void consumeExamCharge(BillingChargeRequestDTO request) {
         log.info("검사서비스 수납정보 수신: patientId={}, sourceServiceCode={}, feeCode={}",

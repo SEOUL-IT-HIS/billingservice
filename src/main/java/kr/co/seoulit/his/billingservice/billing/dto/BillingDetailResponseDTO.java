@@ -2,6 +2,8 @@ package kr.co.seoulit.his.billingservice.billing.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -11,15 +13,13 @@ import lombok.*;
 public class BillingDetailResponseDTO{
 
     private String billingId;
-    private String visitId;
+    private String receptionId;
     private String admissionId;
     private String billingStatus;
     //수납 테이블 정보
 
-    private Long outpatientAmount;
-    private Long inpatientAmount;
     private Long totalAmount;
-    //수납 진료/입퇴원 계산으로 만들어진 필드값
+    //billing_detail 합산 금액 (billingId 단건이라 외래/입원 구분 없이 하나로 충분함)
 
     private String patientId;
     private String patientName;
@@ -28,5 +28,8 @@ public class BillingDetailResponseDTO{
     private String phoneNo;
     private String birthDate;
     //환자 서비스 정보 - SQL 아닌 patientBusinessDelegate REST 호출로 채움
+
+    private List<BillingDetailItemDTO> items;
+    //검사/진료/약제 등 billing_detail 행 목록
     //환자 진료비 상세조회(메인)
 }

@@ -6,39 +6,6 @@
 <mapper namespace="kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository">
 
     <!-- ========================================================= -->
-    <!-- 공통: BILLING + BILLING_DETAIL + BILLING_MASTER 조인       -->
-    <!-- ========================================================= -->
-
-    <sql id="billingPreviewSelect">
-
-        SELECT
-            b.billing_id                 AS billingId,
-            b.patient_id                 AS patientId,
-            b.visit_id                   AS visitId,
-            b.admission_id               AS admissionId,
-            b.billing_status             AS billingStatus,
-
-            bd.quantity                  AS quantity,
-            bd.unit_price                AS unitPrice,
-            bd.amount                    AS amount,
-            bd.detail_status             AS detailStatus,
-            bd.occurred_at               AS occurredAt,
-
-            bm.fee_code                  AS feeCode,
-            bm.item_name                 AS itemName
-
-        FROM billing b
-
-                 JOIN billing_detail bd
-                      ON b.billing_id = bd.billing_id
-
-                 JOIN billing_master bm
-                      ON bd.billing_master_id = bm.billing_master_id
-
-    </sql>
-
-
-    <!-- ========================================================= -->
     <!-- 1. 조건 검색: 수납할 방문/입원 건 찾기                     -->
     <!-- 환자 이름/주소/전화번호는 환자서비스 REST API에서 조회.    -->
     <!-- patientName은 서비스 레이어에서 환자서비스 조회 후 얻은    -->
@@ -77,114 +44,55 @@
 </select>
 
     <!-- ========================================================= -->
-    <!-- 1-1. billingId 기준 대표 정보(수납 헤더/합계) 단건 조회     -->
-    <!-- 상세보기 진입 시 헤더(환자/구분ID/합계) 조회용             -->
-    <!-- ========================================================= -->
-    <select id="findBillingSummaryByBillingId"
-            parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailResponseDTO">
-
-        SELECT
-            b.billing_id       AS billingId,
-            b.patient_id       AS patientId,
-            b.visit_id         AS visitId,
-            b.admission_id     AS admissionId,
-            b.billing_status   AS billingStatus,
-
-            NVL(SUM(
-                        CASE
-                            WHEN b.visit_id IS NOT NULL
-                                THEN bd.amount
-                            ELSE 0
-                            END
-                ), 0) AS outpatientAmount,
-
-            NVL(SUM(
-                        CASE
-                            WHEN b.admission_id IS NOT NULL
-                                THEN bd.amount
-                            ELSE 0
-                            END
-                ), 0) AS inpatientAmount,
-
-            NVL(SUM(bd.amount), 0) AS totalAmount
-
-        FROM billing b
-
-                 JOIN billing_detail bd
-                      ON b.billing_id = bd.billing_id
-
-        WHERE b.billing_id = #{billingId}
-
-        GROUP BY
-            b.billing_id,
-            b.patient_id,
-            b.visit_id,
-            b.admission_id,
-            b.billing_status
-
-    </select>
-
-    <!-- ========================================================= -->
-    <!-- 2-1. 방문 ID 기준 외래 진료비 상세조회                     -->
+    <!-- 2. billingId 기준 진료비 상세조회 (헤더 + 상세 항목 통합)   -->
+    <!-- billing_detail 행 개수만큼 여러 행이 나오고, 헤더/합계값은  -->
+    <!-- 윈도우 함수(OVER)로 매 행에 동일하게 반복됨. 서비스 레이어  -->
+    <!-- 에서 첫 행만 꺼내 헤더를 조립하고, 전체를 items로 사용함.   -->
+    <!-- 환자의 이의제기를 납득시킬 만한 상세조회도 겸함             -->
     <!-- ========================================================= -->
 
-    <select id="findBillingPreviewByVisitId"
-            parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
+    <select id="findBillingDetailFull"
+        parameterType="string"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
 
-        <include refid="billingPreviewSelect"/>
+    SELECT
+        b.billing_id                 AS billingId,
+        b.patient_id                 AS patientId,
+        b.reception_id               AS receptionId,
+        b.admission_id               AS admissionId,
+        b.billing_status             AS billingStatus,
 
-        WHERE b.visit_id = #{visitId}
-        AND b.billing_status = 'READY'
-        AND bd.detail_status = 'READY'
+        bd.quantity                  AS quantity,
+        bd.unit_price                AS unitPrice,
+        bd.amount                    AS amount,
+        bd.detail_status             AS detailStatus,
+        bd.occurred_at               AS occurredAt,
+        bd.billing_type              AS billingType,
 
-        ORDER BY bd.occurred_at ASC
+        bm.fee_code                  AS feeCode,
+        bm.item_name                 AS itemName,
 
-    </select>
+        NVL(SUM(bd.amount) OVER (PARTITION BY b.billing_id), 0)   AS totalAmount
+
+    FROM billing b
+
+             JOIN billing_detail bd
+                  ON b.billing_id = bd.billing_id
+
+             JOIN billing_master bm
+                  ON bd.billing_master_id = bm.billing_master_id
+
+    WHERE b.billing_id = #{billingId}
+      AND b.billing_status = 'READY'
+      AND bd.detail_status = 'READY'
+
+    ORDER BY bd.occurred_at ASC
+
+</select>
 
 
     <!-- ========================================================= -->
-    <!-- 2-2. 입원 ID 기준 퇴원 진료비 상세조회                     -->
-    <!-- ========================================================= -->
-
-    <select id="findBillingPreviewByAdmissionId"
-            parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
-
-        <include refid="billingPreviewSelect"/>
-
-        WHERE b.admission_id = #{admissionId}
-        AND b.billing_status = 'READY'
-        AND bd.detail_status = 'READY'
-
-        ORDER BY bd.occurred_at ASC
-
-    </select>
-
-
-    <!-- ========================================================= -->
-    <!-- 3-1. 수납 가능 여부 및 처리 상태 확인 (billingDetailId 기준) -->
-    <!-- ========================================================= -->
-
-    <select id="findBillingStatusByDetailId"
-            parameterType="string"
-            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO">
-
-        SELECT
-            bd.billing_detail_id AS billingDetailId,
-            bd.billing_id        AS billingId,
-            bd.detail_status     AS detailStatus
-
-        FROM billing_detail bd
-
-        WHERE bd.billing_detail_id = #{billingDetailId}
-
-    </select>
-
-
-    <!-- ========================================================= -->
-    <!-- 3-2. 결제 전 수납정보 존재 및 READY 상태 확인 (billingId 기준) -->
+    <!-- 3. 결제 전 수납정보 존재 및 READY 상태 확인 (billingId 기준) -->
     <!-- ========================================================= -->
 
     <select id="selectBillingDetailForStatusUpdate"
@@ -204,7 +112,7 @@
 
 
     <!-- ========================================================= -->
-    <!-- 3-3. 결제 처리: READY → SUCCESS                            -->
+    <!-- 4. 결제 처리: READY → SUCCESS                              -->
     <!-- ========================================================= -->
 
     <update id="updateBillingStatusToSuccess"
@@ -222,7 +130,7 @@
 
 
     <!-- ========================================================= -->
-    <!-- 4. 타 서비스에서 넘어온 진료비 항목을 billing_detail에 등록  -->
+    <!-- 5. 타 서비스에서 넘어온 진료비 항목을 billing_detail에 등록  -->
     <!-- ========================================================= -->
 
     <insert id="insertBillingDetail"
@@ -234,6 +142,9 @@
             billing_master_id,
             source_service_code,
             source_record_id,
+            fee_code,
+            item_name,
+            unit_price,
             quantity,
             amount,
             detail_status,
@@ -246,6 +157,9 @@
             #{billingMasterId},
             #{sourceServiceCode},
             #{sourceRecordId},
+            #{feeCode},
+            #{itemName},
+            #{unitPrice},
             #{quantity},
             #{amount},
             'READY',

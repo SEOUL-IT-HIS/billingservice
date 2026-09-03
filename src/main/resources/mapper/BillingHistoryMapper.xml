@@ -21,7 +21,7 @@
             b.patient_id            AS patientId,
 
             CASE
-                WHEN b.visit_id IS NOT NULL THEN 'OUTPATIENT'
+                WHEN b.reception_id IS NOT NULL THEN 'OUTPATIENT'
                 ELSE 'INPATIENT'
             END AS billingType,
 
@@ -74,7 +74,7 @@
             b.patient_id     AS patientId,
 
             CASE
-                WHEN b.visit_id IS NOT NULL THEN 'OUTPATIENT'
+                WHEN b.reception_id IS NOT NULL THEN 'OUTPATIENT'
                 ELSE 'INPATIENT'
             END AS billingType,
 
@@ -93,7 +93,7 @@
         GROUP BY
             b.billing_id,
             b.patient_id,
-            b.visit_id,
+            b.reception_id,
             b.billing_status,
             b.created_at
 

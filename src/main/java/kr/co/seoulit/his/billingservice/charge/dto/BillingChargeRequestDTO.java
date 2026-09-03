@@ -10,7 +10,7 @@ import lombok.*;
 public class BillingChargeRequestDTO {
 
     private String patientId;
-    private String visitId;
+    private String receptionId;
     private String admissionId;
 
     private String sourceServiceCode;
