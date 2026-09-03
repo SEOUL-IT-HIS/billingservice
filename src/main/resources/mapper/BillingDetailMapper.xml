@@ -70,7 +70,7 @@
         bd.billing_type              AS billingType,
 
         bm.fee_code                  AS feeCode,
-        bm.item_name                 AS itemName,
+        bm.fee_name                  AS itemName,
 
         NVL(SUM(bd.amount) OVER (PARTITION BY b.billing_id), 0)   AS totalAmount
 
@@ -149,7 +149,11 @@
             amount,
             detail_status,
             occurred_at,
-            created_at
+            created_at,
+            patient_id,
+            reception_id,
+            admission_id,
+            billing_type
         )
         VALUES (
             #{billingDetailId},
@@ -164,7 +168,11 @@
             #{amount},
             'READY',
             CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            CURRENT_TIMESTAMP,
+            #{patientId},
+            #{receptionId},
+            #{admissionId},
+            #{billingType}
         )
 
     </insert>

@@ -11,8 +11,10 @@ import lombok.*;
 public class BillingChargeResponseDTO {
 
     private String billingId;
+    private String patientId;
     private String receptionId;
     private String admissionId;
+    private String billingType;
 
     private String billingDetailId;
     private String billingMasterId;

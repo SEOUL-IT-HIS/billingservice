@@ -21,6 +21,11 @@ public class BillingDetailResponseDTO{
     private Long totalAmount;
     //billing_detail 합산 금액 (billingId 단건이라 외래/입원 구분 없이 하나로 충분함)
 
+    private Long outpatientAmount;
+    private Long inpatientAmount;
+    //billingId 하나는 receptionId 또는 admissionId 둘 중 하나만 가지므로
+    //둘 중 하나는 totalAmount와 같고 나머지는 0 - 프론트엔드 외래/입원 구분 표시용
+
     private String patientId;
     private String patientName;
     private String address;
