@@ -22,9 +22,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BillingChargeServiceImpl implements BillingChargeService {
 
-    private final BillingMasterRepository billingMasterRepository;
-    private final BillingDetailRepository billingDetailRepository;
-    private final BillingRepository billingRepository;
+    private final BillingMasterRepository billingMasterRepository;// 수납기준정보(billing_master) 조회용
+    private final BillingDetailRepository billingDetailRepository;// 수납상세정보(billing_detail) insert용
+    private final BillingRepository billingRepository;            // 수납헤더정보(billing) 조회/insert/update용
 
     @Override
     public void createCharge(BillingChargeRequestDTO billingChargeRequestDTO) {
