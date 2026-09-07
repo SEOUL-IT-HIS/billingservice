@@ -25,3 +25,10 @@ mybatis.mapper-locations=classpath:/mapper/*.xml
 
 # Patient service (REST)
 patient.service.base-url=<patient_service_base_url>
+
+# KakaoPay
+kakaopay.cid=<kakaopay_cid>
+kakaopay.secret-key=<kakaopay_secret_key>
+kakaopay.approval-url=<kakaopay_approval_url>
+kakaopay.cancel-url=<kakaopay_cancel_url>
+kakaopay.fail-url=<kakaopay_fail_url>

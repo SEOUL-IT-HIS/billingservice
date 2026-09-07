@@ -25,6 +25,8 @@ public enum ErrorCode {
     BILLING_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리되었거나 수납 가능한 상태가 아닙니다."),
     BILLING_RECEPTION_OR_ADMISSION_ID_REQUIRED(HttpStatus.BAD_REQUEST, "접수 ID 또는 입원 ID 중 하나는 필수입니다."),
 
+    KAKAOPAY_TID_NOT_FOUND(HttpStatus.NOT_FOUND, "카카오페이 결제 준비 정보를 찾을 수 없습니다. ready부터 다시 시도해주세요."),
+
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND,"환자 정보를 찾을 수 없습니다."),
     PATIENT_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "환자 서비스와 통신할 수 없습니다. 잠시 후 다시 시도해주세요."),
 
