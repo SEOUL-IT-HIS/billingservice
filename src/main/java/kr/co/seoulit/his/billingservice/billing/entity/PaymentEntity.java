@@ -38,8 +38,8 @@ public class PaymentEntity {
     private LocalDateTime paymentAt;
 
     @Column(name="CREATED_AT")
-    private String createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name="UPDATED_AT")
-    private String updatedAt;
+    private LocalDateTime updatedAt;
 }

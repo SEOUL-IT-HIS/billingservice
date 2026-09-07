@@ -43,13 +43,16 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException(ErrorCode.BILLING_ALREADY_PROCESSED);
         }
 
+        LocalDateTime now = LocalDateTime.now();
         PaymentEntity payment = PaymentEntity.builder()
                 .paymentId(UUID.randomUUID().toString())
                 .billingId(header.getBillingId())
                 .paymentMethodCode(request.getPaymentMethodCode())
                 .paymentAmount(header.getTotalAmount())
-                .paymentStatus("SUCCESS")
-                .paymentAt(LocalDateTime.now())
+                .paymentStatus("APPROVED")
+                .paymentAt(now)
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
         paymentRepository.save(payment);
 
