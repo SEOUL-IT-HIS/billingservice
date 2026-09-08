@@ -177,4 +177,15 @@
 
     </insert>
 
+    <select id="countReadyBilling"
+            statementType="CALLABLE"
+            parameterType="map">
+        {call billing_ready_paient(
+              #{ready_count, mode=OUT, jdbcType=NUMERIC}
+              )}
+    </select>
+    <!--    프로시저 과제 테스트-->
+
+
+
 </mapper>

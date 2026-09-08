@@ -7,14 +7,12 @@ import kr.co.seoulit.his.billingservice.billing.repository.BillingDetailReposito
 import kr.co.seoulit.his.billingservice.billing.repository.PaymentRepository;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
-import kr.co.seoulit.his.billingservice.settlement.producer.SettlementCompletedKafkaProducer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -24,8 +22,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final BillingDetailRepository billingDetailRepository;
     private final PaymentRepository paymentRepository;
-    // app.kafka.enabled=false이면 이 빈 자체가 없으므로 Optional로 받아 앱이 안 죽게 함
-    private final Optional<SettlementCompletedKafkaProducer> settlementCompletedKafkaProducer;
 
     @Override
     public void processPayment(PaymentRequestDTO request) {
@@ -55,10 +51,5 @@ public class PaymentServiceImpl implements PaymentService {
                 .updatedAt(now)
                 .build();
         paymentRepository.save(payment);
-
-        // 입원 건 결제가 실제로 끝났을 때만 병동서비스에 정산 완료를 알림 (외래는 대상 아님)
-        if (header.getAdmissionId() != null) {
-            settlementCompletedKafkaProducer.ifPresent(producer -> producer.publish(header.getAdmissionId()));
-        }
     }
 }

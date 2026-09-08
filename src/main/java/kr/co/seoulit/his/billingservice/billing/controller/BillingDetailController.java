@@ -68,4 +68,16 @@ public class BillingDetailController {
         );
     }
     //결제 화면 - 팝업. 누르면 billing_status,payment_status 를 ready->success
+
+   
+    @GetMapping("/procedure-test")
+    public ResponseEntity<ApiResponse<Integer>> countReadyBilling() {
+        int result = billingDetailService.countReadyBilling();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessCode.OK.getMessage(),
+                        result
+                )
+        );
+    }
 }

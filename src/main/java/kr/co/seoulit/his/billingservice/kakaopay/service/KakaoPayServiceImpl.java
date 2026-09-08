@@ -94,35 +94,42 @@ public class KakaoPayServiceImpl implements KakaoPayService {
     public void approve(KakaoPayApproveRequestDTO request) {
         String billingId = request.getBillingId();
 
-        // ready 때 저장해둔 tid를 다시 꺼냄 - 없으면 ready를 건너뛰고 온 것이거나 서버가 재시작된 것
-        String tid = tidStore.get(billingId);
+        // get() 대신 remove()로 원자적으로 꺼냄 - 프론트에서 approve가 중복으로(예: React StrictMode
+        // 개발 모드 이펙트 중복 실행) 거의 동시에 두 번 들어와도, tid를 실제로 가져가는 건 둘 중 하나뿐이라
+        // 나머지 하나는 카카오페이 실제 approve API를 부르기도 전에 여기서 막힘 -
+        // "payment is already done!"(-702) 같은 카카오페이 쪽 중복 승인 에러 자체를 예방함
+        String tid = tidStore.remove(billingId);
         if (tid == null) {
             throw new BusinessException(ErrorCode.KAKAOPAY_TID_NOT_FOUND);
         }
 
-        // ready 때와 동일하게 patientId 재조회 (partner_user_id는 ready 때 보낸 값과 같아야 함)
-        List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(billingId);
-        if (items.isEmpty()) {
-            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        try {
+            // ready 때와 동일하게 patientId 재조회 (partner_user_id는 ready 때 보낸 값과 같아야 함)
+            List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(billingId);
+            if (items.isEmpty()) {
+                throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+            }
+            BillingDetailItemDTO header = items.get(0);
+
+            KakaoPayApiApproveRequestDTO apiRequest = KakaoPayApiApproveRequestDTO.builder()
+                    .cid(cid)
+                    .tid(tid)
+                    .partnerOrderId(billingId)
+                    .partnerUserId(header.getPatientId())
+                    .pgToken(request.getPgToken())
+                    .build();
+
+            // 카카오페이가 승인을 거절하면 RestTemplate이 예외를 던지고, 그 예외가 그대로 위로 전파되어
+            // 트랜잭션이 롤백됨(아래 processPayment까지 안 감) - 실패 시 우리 DB엔 아무 흔적도 안 남음
+            kakaoPayClient.approve(apiRequest);
+
+            // 카카오페이 승인 확인 끝났으니, 그 다음은 CASH/CARD와 완전히 동일한 마무리 로직 재사용
+            paymentService.processPayment(new PaymentRequestDTO(billingId, "KAKAO_PAY"));
+        } catch (RuntimeException e) {
+            // 진짜 실패(네트워크 오류 등)라면 재시도할 수 있게 tid를 되돌려놓음
+            tidStore.put(billingId, tid);
+            throw e;
         }
-        BillingDetailItemDTO header = items.get(0);
-
-        KakaoPayApiApproveRequestDTO apiRequest = KakaoPayApiApproveRequestDTO.builder()
-                .cid(cid)
-                .tid(tid)
-                .partnerOrderId(billingId)
-                .partnerUserId(header.getPatientId())
-                .pgToken(request.getPgToken())
-                .build();
-
-        // 카카오페이가 승인을 거절하면 RestTemplate이 예외를 던지고, 그 예외가 그대로 위로 전파되어
-        // 트랜잭션이 롤백됨(아래 processPayment까지 안 감) - 실패 시 우리 DB엔 아무 흔적도 안 남음
-        kakaoPayClient.approve(apiRequest);
-
-        // 카카오페이 승인 확인 끝났으니, 그 다음은 CASH/CARD와 완전히 동일한 마무리 로직 재사용
-        paymentService.processPayment(new PaymentRequestDTO(billingId, "KAKAO_PAY"));
-
-        tidStore.remove(billingId); // 다 썼으니 정리
     }
 
 }
