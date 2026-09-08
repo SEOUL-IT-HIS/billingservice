@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface BillingDetailRepository {
@@ -29,4 +30,8 @@ public interface BillingDetailRepository {
 
     // 타 서비스에서 넘어온 수납 항목을 billing_detail에 등록
     void insertBillingDetail(BillingChargeResponseDTO billingChargeResponseDTO);
+
+    // 프로시저 과제 - 수납준비환자가 몇명인지 추출
+    void countReadyBilling(Map<String, Object> params);
+
 }
