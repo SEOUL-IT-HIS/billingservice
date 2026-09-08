@@ -16,4 +16,7 @@ public interface BillingDetailService {
 
     void updateBillingStatusToSuccess(String billingId);
     //상태값 ready->success 로 변경
+
+    int countReadyBilling();
+    //프로시저 과제 테스트 - 수납준비(READY) 상태 건수 조회
 }

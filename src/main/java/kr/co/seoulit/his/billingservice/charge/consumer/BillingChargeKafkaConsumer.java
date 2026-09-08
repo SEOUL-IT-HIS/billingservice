@@ -2,7 +2,6 @@ package kr.co.seoulit.his.billingservice.charge.consumer;
 
 import kr.co.seoulit.his.billingservice.charge.dto.BillingChargeRequestDTO;
 import kr.co.seoulit.his.billingservice.charge.service.BillingChargeService;
-import kr.co.seoulit.his.billingservice.settlement.service.DischargeReadinessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,12 +18,11 @@ import org.springframework.stereotype.Component;
 public class BillingChargeKafkaConsumer {
 
     // 병동서비스는 "퇴원신청" 신호를 실제 수가 대신 이 feeCode로 charge 등록 토픽에 함께 보낸다.
-    // billing_master에 등록된 수가가 아니므로 createCharge()로 넘기면 BILLING_FEE_CODE_NOT_FOUND가 나며,
-    // 애초에 청구 항목으로 적립할 대상도 아니라서 별도 분기로 처리한다.
+    // billing_master에 등록된 수가가 아니므로 createCharge()로 넘기면 BILLING_FEE_CODE_NOT_FOUND가 나서,
+    // 수납기준정보 등록 대상이 아닌 이 신호는 그냥 무시한다.
     private static final String DISCHARGE_REQUEST_FEE_CODE = "DISCHARGE_REQUEST";
 
     private final BillingChargeService billingChargeService;
-    private final DischargeReadinessService dischargeReadinessService;
 
     @KafkaListener(
             topics = {
@@ -40,7 +38,7 @@ public class BillingChargeKafkaConsumer {
                 request.getSourceServiceCode(), request.getFeeCode());
 
         if (DISCHARGE_REQUEST_FEE_CODE.equals(request.getFeeCode())) {
-            dischargeReadinessService.checkDischargeReadiness(request.getAdmissionId());
+            log.info("퇴원요청 신호는 수납기준정보 등록 대상이 아니므로 무시: admissionId={}", request.getAdmissionId());
             return;
         }
 
