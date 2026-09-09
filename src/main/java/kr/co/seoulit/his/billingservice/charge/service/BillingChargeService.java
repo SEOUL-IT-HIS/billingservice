@@ -5,4 +5,6 @@ import kr.co.seoulit.his.billingservice.charge.dto.BillingChargeRequestDTO;
 public interface BillingChargeService{
 
     void createCharge(BillingChargeRequestDTO billingChargeRequestDTO);
+
+    void checkDischargeReadiness(String admissionId);
 }

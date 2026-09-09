@@ -38,7 +38,7 @@ public class BillingChargeKafkaConsumer {
                 request.getSourceServiceCode(), request.getFeeCode());
 
         if (DISCHARGE_REQUEST_FEE_CODE.equals(request.getFeeCode())) {
-            log.info("퇴원요청 신호는 수납기준정보 등록 대상이 아니므로 무시: admissionId={}", request.getAdmissionId());
+            billingChargeService.checkDischargeReadiness(request.getAdmissionId());
             return;
         }
 
