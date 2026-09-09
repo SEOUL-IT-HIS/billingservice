@@ -10,6 +10,7 @@ import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.master.entity.BillingMasterEntity;
 import kr.co.seoulit.his.billingservice.master.repository.BillingMasterRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -112,6 +114,22 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         billingCharge.setBillingId(billingId);
         billingCharge.setBillingDetailId(UUID.randomUUID().toString());
         billingDetailRepository.insertBillingDetail(billingCharge);
+    }
+
+    // 진료비는 입원 기간 내내 charge 등록 시점에 이미 admissionId 기준으로 billing에 누적되고 있으므로,
+    // 퇴원신청 신호를 받았다고 별도로 집계/생성할 것은 없고 해당 admissionId의 billing이 실제로
+    // 존재하는지 한 번 확인만 한다 (없으면 데이터 불일치이므로 경고 로그만 남김).
+    @Override
+    public void checkDischargeReadiness(String admissionId) {
+        BillingEntity billing = billingRepository.findByAdmissionId(admissionId).orElse(null);
+
+        if (billing == null) {
+            log.warn("퇴원 요청을 받았지만 해당 admissionId의 수납 정보가 없습니다: admissionId={}", admissionId);
+            return;
+        }
+
+        log.info("퇴원 요청 수신, 정산 준비 완료: admissionId={}, billingId={}, billingStatus={}",
+                admissionId, billing.getBillingId(), billing.getBillingStatus());
     }
 
 }
