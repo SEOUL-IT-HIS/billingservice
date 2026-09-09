@@ -5,7 +5,9 @@ import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.master.entity.BillingEntity;
 import kr.co.seoulit.his.billingservice.master.mapper.BillingMapper;
 import kr.co.seoulit.his.billingservice.master.repository.BillingRepository;
+import kr.co.seoulit.his.billingservice.master.repository.CommonCodeRepository;
 import kr.co.seoulit.his.billingservice.master.dto.BillingDTO;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +20,17 @@ public class BillingMasterServiceImpl implements BillingMasterService {
 
     private final BillingRepository billingRepository;
     private final BillingMapper billingMapper;
+    private final CommonCodeRepository commonCodeRepository;
 
-    public BillingMasterServiceImpl(BillingRepository billingRepository, BillingMapper billingMapper) {
+    // 공통코드 "서비스구분" 그룹(외래시스템/응급시스템/병동시스템/검사시스템/수술시스템) - admin.common_code.group_id
+    @Value("${billing.master.source-service-code.group-id}")
+    private String sourceServiceCodeGroupId;
+
+    public BillingMasterServiceImpl(BillingRepository billingRepository, BillingMapper billingMapper,
+                                     CommonCodeRepository commonCodeRepository) {
         this.billingRepository = billingRepository;
         this.billingMapper = billingMapper;
+        this.commonCodeRepository = commonCodeRepository;
     }
 
     @Override
@@ -42,6 +51,11 @@ public class BillingMasterServiceImpl implements BillingMasterService {
     public BillingDTO createBillingMaster(BillingDTO billingDTO) {
         // 필수값 체크 - DB에 not null 오류 방지 
     if (billingDTO.getSourceServiceCode() == null || billingDTO.getSourceServiceCode().isBlank()) {
+        throw new BusinessException(ErrorCode.BILLING_SOURCE_SERVICE_CODE_NOT_FOUND);
+    }
+    // FK(admin.common_code)를 타기 전에 미리 검증 - 위반 시 원시 DB 예외 대신 명확한 에러를 준다
+    if (!commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
+            billingDTO.getSourceServiceCode(), sourceServiceCodeGroupId, "Y")) {
         throw new BusinessException(ErrorCode.BILLING_SOURCE_SERVICE_CODE_NOT_FOUND);
     }
         //서비스 구분 코드
