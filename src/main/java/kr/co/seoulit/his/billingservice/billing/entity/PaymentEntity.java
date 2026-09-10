@@ -31,6 +31,9 @@ public class PaymentEntity {
     @Column(name="APPROVAL_NO")
     private String approvalNo;
 
+    @Column(name="RECEIPT_NO", length = 10)
+    private String receiptNo;
+
     @Column(name="PAYMENT_STATUS",nullable=false)
     private String paymentStatus;
 

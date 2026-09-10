@@ -28,6 +28,7 @@ public class BillingHistorySummaryDTO {
     private Integer paymentAmount;
     private String paymentMethod;
     private LocalDateTime paymentAt;
+    private String receiptNo;
 
     private String billingStatus;
 }

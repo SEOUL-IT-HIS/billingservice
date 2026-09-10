@@ -18,9 +18,12 @@ public class BillingHistoryDTO {
     private String patientName;
     private String billingType;
 
-    private Integer totalAmount;
+    private String paymentId;
+    private Integer paymentAmount;
+    private String paymentMethod;
+    private LocalDateTime paymentAt;
+    private String receiptNo;
 
     private String billingStatus;
-    private LocalDateTime billingAt;
 
 }
