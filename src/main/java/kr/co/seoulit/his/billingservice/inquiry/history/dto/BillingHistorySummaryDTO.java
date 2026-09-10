@@ -19,6 +19,7 @@ public class BillingHistorySummaryDTO {
     private String address;
     private String addressDetail;
     private String phoneNo;
+    private String birthDate;
 
     // 외래 / 입원 구분
     private String billingType;
