@@ -32,6 +32,7 @@ public class BillingHistoryServiceImpl implements BillingHistoryService {
             List<PatientDTO> patients = patientBusinessDelegate.searchPatientsByName(patientName);
             if (patients.isEmpty()) {
                 return List.of();
+            
             }
 
             searchDTO.setPatientIds(
