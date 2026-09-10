@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -32,6 +33,7 @@ public class BillingDetailServiceImpl implements BillingDetailService {
     public List<BillingSummaryDTO> searchBillingDetails(
             BillingDetailSearchDTO searchDTO) {
         String patientName = searchDTO.getPatientName();
+
         if (patientName != null && !patientName.isBlank()) {
             List<PatientDTO> patients = patientBusinessDelegate.searchPatientsByName(patientName);
             if (patients.isEmpty()) {
@@ -56,8 +58,10 @@ public class BillingDetailServiceImpl implements BillingDetailService {
             PatientDTO patient = patientById.get(summary.getPatientId());
             if (patient != null) {
                 summary.setPatientName(patient.getPatientName());
-                summary.setTel(patient.getTel());
-                summary.setAddr(patient.getAddr());}
+                summary.setPhoneNo(patient.getPhoneNo());
+                summary.setAddress(patient.getAddress());
+                summary.setAddressDetail(patient.getAddressDetail());
+                summary.setBirthDate(patient.getBirthDate());}
         });
 
         return summaries;
@@ -65,35 +69,47 @@ public class BillingDetailServiceImpl implements BillingDetailService {
     
     
     /**
-     * 상세보기 버튼 클릭 후 billingId 기준 상세 항목 조회
+     * 상세보기 버튼 클릭 후 billingId 기준 헤더 + 상세 항목(items) 통합 조회
      */
     @Override
     public BillingDetailResponseDTO getBillingDetails(String billingId) {
 
-        // billingId에 해당하는 수납 및 진료비 요약 정보 조회
-        BillingDetailResponseDTO detail =
-                billingDetailRepository.findBillingSummaryByBillingId(billingId);
+        // billingId에 해당하는 billing_detail 행 전체 조회 (헤더 값은 윈도우 함수로 매 행에 반복돼 있음)
+        List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(billingId);
 
         // 해당 수납 건이 존재하지 않으면 예외 처리
-        if (detail == null) {
+        if (items.isEmpty()) {
             throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
         }
 
+        // 모든 행이 같은 헤더 값을 갖고 있으므로 첫 행에서 헤더 정보를 꺼냄
+        BillingDetailItemDTO header = items.get(0);
+
         // 수납 데이터의 patientId로 환자 서비스 조회
         PatientDTO patient =
-                patientBusinessDelegate.getPatientById(detail.getPatientId());
+                patientBusinessDelegate.getPatientById(header.getPatientId());
 
         // 환자 정보가 존재하지 않으면 예외 처리
         if (patient == null) {
             throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
         }
 
-        // 환자 서비스에서 받은 정보를 상세 응답 DTO에 결합
-        detail.setPatientName(patient.getPatientName());
-        detail.setTel(patient.getTel());
-        detail.setAddr(patient.getAddr());
-
-        return detail;
+        return BillingDetailResponseDTO.builder()
+                .billingId(header.getBillingId())
+                .receptionId(header.getReceptionId())
+                .admissionId(header.getAdmissionId())
+                .billingStatus(header.getBillingStatus())
+                .totalAmount(header.getTotalAmount())
+                .outpatientAmount(header.getReceptionId() != null ? header.getTotalAmount() : 0L)
+                .inpatientAmount(header.getAdmissionId() != null ? header.getTotalAmount() : 0L)
+                .patientId(patient.getPatientId())
+                .patientName(patient.getPatientName())
+                .phoneNo(patient.getPhoneNo())
+                .address(patient.getAddress())
+                .addressDetail(patient.getAddressDetail())
+                .birthDate(patient.getBirthDate())
+                .items(items)
+                .build();
     }
     //메인 페이지에 불러와야할 데이터들. 환자 한명의 진료비 상세 조회
     //외래비 + 입원비 = 총합
@@ -114,37 +130,12 @@ public class BillingDetailServiceImpl implements BillingDetailService {
 
         billingDetailRepository.updateBillingStatusToSuccess(billingId);
     }
-    //수납 가능 여부 및 처리 상태 확인
+
     @Override
-    public BillingStatusDTO getBillingStatus(String billingDetailId) {
-
-        BillingStatusDTO billingStatusDTO =
-                billingDetailRepository.findBillingStatusByDetailId(billingDetailId);
-
-        if (billingStatusDTO == null) {throw new BusinessException(ErrorCode.BILLING_DETAIL_NOT_FOUND);}
-
-        return billingStatusDTO;
+    public int countReadyBilling() {
+        Map<String, Object> params = new HashMap<>();
+        billingDetailRepository.countReadyBilling(params);
+        return ((Number) params.get("ready_count")).intValue();
     }
-    //방문id로 조회
-    @Override
-    public List<BillingDetailItemDTO> getVisitBillingPreview(String visitId){
-
-        List<BillingDetailItemDTO> billingDetails
-                =billingDetailRepository.findBillingPreviewByVisitId(visitId);
-        //service->repository->xml(sql)
-        return billingDetails;
-    }
-    //입원id로 조회
-    @Override
-    public List<BillingDetailItemDTO> getAdmissionBillingPreview(String admissionId){
-
-        List<BillingDetailItemDTO> billingDetails
-                =billingDetailRepository.findBillingPreviewByAdmissionId(admissionId);
-        //service->repository->xml(sql)
-        return billingDetails;
-    }
-
-
-
 
 }

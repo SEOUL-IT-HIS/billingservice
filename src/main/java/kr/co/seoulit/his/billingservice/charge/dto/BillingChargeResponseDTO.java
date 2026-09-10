@@ -6,18 +6,24 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 
-public class BillingChargeRequestDTO {
+public class BillingChargeResponseDTO {
 
+    private String billingId;
     private String patientId;
     private String receptionId;
     private String admissionId;
+    private String billingType;
 
+    private String billingDetailId;
+    private String billingMasterId;
     private String sourceServiceCode;
     private String sourceRecordId;
 
     private String feeCode;
     private String itemName;
+    private String unitPrice;
 
     private String quantity;
     private String amount;

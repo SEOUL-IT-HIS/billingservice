@@ -21,7 +21,7 @@
             b.patient_id            AS patientId,
 
             CASE
-                WHEN b.visit_id IS NOT NULL THEN 'OUTPATIENT'
+                WHEN b.reception_id IS NOT NULL THEN 'OUTPATIENT'
                 ELSE 'INPATIENT'
             END AS billingType,
 
@@ -30,7 +30,8 @@
             p.payment_id            AS paymentId,
             p.payment_amount        AS paymentAmount,
             p.payment_method_code   AS paymentMethod,
-            p.payment_at            AS paymentAt
+            p.payment_at            AS paymentAt,
+            p.receipt_no            AS receiptNo
 
         FROM billing b
 
@@ -63,6 +64,8 @@
     <!-- ========================================================= -->
     <!-- 2. 환자 ID 기준 수납 이력 전체 조회                        -->
     <!-- 환자 한 명의 외래/입원 수납 건 전체(N건)를 조회.           -->
+    <!-- billing_detail 합계가 아니라 실제 결제된 payment 기준으로  -->
+    <!-- 조회함(부분수납/할인 등으로 청구액과 수납액이 다를 수 있음).-->
     <!-- patientName은 서비스 레이어에서 환자서비스 조회 후 채워짐. -->
     <!-- ========================================================= -->
     <select id="findBillingHistoryByPatientId"
@@ -70,34 +73,31 @@
             resultType="kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDTO">
 
         SELECT
-            b.billing_id     AS billingId,
-            b.patient_id     AS patientId,
+            b.billing_id            AS billingId,
+            b.patient_id            AS patientId,
 
             CASE
-                WHEN b.visit_id IS NOT NULL THEN 'OUTPATIENT'
+                WHEN b.reception_id IS NOT NULL THEN 'OUTPATIENT'
                 ELSE 'INPATIENT'
             END AS billingType,
 
-            NVL(SUM(bd.amount), 0) AS totalAmount,
+            p.payment_id            AS paymentId,
+            p.payment_amount        AS paymentAmount,
+            p.payment_method_code   AS paymentMethod,
+            p.payment_at            AS paymentAt,
+            p.receipt_no            AS receiptNo,
 
-            b.billing_status AS billingStatus,
-            b.created_at     AS billingAt
+            b.billing_status        AS billingStatus
 
         FROM billing b
 
-                 JOIN billing_detail bd
-                      ON b.billing_id = bd.billing_id
+        JOIN payment p
+            ON p.billing_id = b.billing_id
+           AND p.payment_status = 'APPROVED'
 
         WHERE b.patient_id = #{patientId}
 
-        GROUP BY
-            b.billing_id,
-            b.patient_id,
-            b.visit_id,
-            b.billing_status,
-            b.created_at
-
-        ORDER BY b.created_at DESC
+        ORDER BY p.payment_at DESC
 
     </select>
 

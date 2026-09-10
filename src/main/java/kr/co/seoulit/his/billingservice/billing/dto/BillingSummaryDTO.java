@@ -12,8 +12,9 @@ public class BillingSummaryDTO{
 
     private String patientId;
     private String patientName;
-    private String addr;
-    private String tel;
+    private String address;
+    private String addressDetail;
+    private String phoneNo;
     private String birthDate;
     //환자 테이블에서 들고올 정보
 

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface BillingRepository extends JpaRepository<BillingEntity, String> {
 
-    Optional<BillingEntity> findByVisitId(String visitId);
+    Optional<BillingEntity> findByReceptionId(String receptionId);
 
     Optional<BillingEntity> findByAdmissionId(String admissionId);
 
