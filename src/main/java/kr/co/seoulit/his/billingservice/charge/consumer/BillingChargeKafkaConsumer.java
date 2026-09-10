@@ -43,5 +43,7 @@ public class BillingChargeKafkaConsumer {
         }
 
         billingChargeService.createCharge(request);
+        log.info("수납정보 등록 완료: patientId={}, sourceServiceCode={}, feeCode={}",
+                request.getPatientId(), request.getSourceServiceCode(), request.getFeeCode());
     }
 }

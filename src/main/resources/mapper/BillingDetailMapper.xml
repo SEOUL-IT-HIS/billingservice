@@ -170,8 +170,8 @@
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP,
             #{patientId},
-            #{receptionId},
-            #{admissionId},
+            #{receptionId, jdbcType=VARCHAR},
+            #{admissionId, jdbcType=VARCHAR},
             #{billingType}
         )
 
