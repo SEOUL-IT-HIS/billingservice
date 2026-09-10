@@ -24,6 +24,7 @@ public enum ErrorCode {
     BILLING_NOT_FOUND(HttpStatus.NOT_FOUND, "수납 정보를 찾을 수 없습니다."),
     BILLING_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리되었거나 수납 가능한 상태가 아닙니다."),
     BILLING_RECEPTION_OR_ADMISSION_ID_REQUIRED(HttpStatus.BAD_REQUEST, "접수 ID 또는 입원 ID 중 하나는 필수입니다."),
+    PAYMENT_RECEIPT_NO_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "영수증번호 채번에 실패했습니다. 다시 시도해주세요."),
 
     KAKAOPAY_TID_NOT_FOUND(HttpStatus.NOT_FOUND, "카카오페이 결제 준비 정보를 찾을 수 없습니다. ready부터 다시 시도해주세요."),
 
