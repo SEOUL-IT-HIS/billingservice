@@ -26,6 +26,14 @@ public class BillingMasterServiceImpl implements BillingMasterService {
     @Value("${billing.master.source-service-code.group-id}")
     private String sourceServiceCodeGroupId;
 
+    // 공통코드 "수가분류코드" 그룹 - admin.common_code.group_id
+    @Value("${billing.master.category-code.group-id}")
+    private String categoryCodeGroupId;
+
+    // 공통코드 "급여구분코드" 그룹 - admin.common_code.group_id
+    @Value("${billing.master.insurance-type-code.group-id}")
+    private String insuranceTypeCodeGroupId;
+
     public BillingMasterServiceImpl(BillingRepository billingRepository, BillingMapper billingMapper,
                                      CommonCodeRepository commonCodeRepository) {
         this.billingRepository = billingRepository;
@@ -74,11 +82,27 @@ public class BillingMasterServiceImpl implements BillingMasterService {
     if (billingDTO.getCategoryCode() == null || billingDTO.getCategoryCode().isBlank()) {
         throw new BusinessException(ErrorCode.BILLING_CATEGORY_CODE_NOT_FOUND);
     }
+    if (!commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
+            billingDTO.getCategoryCode(), categoryCodeGroupId, "Y")) {
+        throw new BusinessException(ErrorCode.BILLING_CATEGORY_CODE_NOT_FOUND);
+    }
         //분류 코드
+    if (billingDTO.getInsuranceTypeCode() == null || billingDTO.getInsuranceTypeCode().isBlank()) {
+        throw new BusinessException(ErrorCode.BILLING_INSURANCE_TYPE_CODE_NOT_FOUND);
+    }
+    if (!commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
+            billingDTO.getInsuranceTypeCode(), insuranceTypeCodeGroupId, "Y")) {
+        throw new BusinessException(ErrorCode.BILLING_INSURANCE_TYPE_CODE_NOT_FOUND);
+    }
+        //급여 비급여 코드
     if (billingDTO.getEffectiveFrom() == null) {
         throw new BusinessException(ErrorCode.BILLING_EFFECTIVE_FORM_NOT_FOUND);
     }
         //적용 시작일
+    if (billingDTO.getEffectiveTo() == null) {
+        throw new BusinessException(ErrorCode.BILLING_EFFECTIVE_TO_NOT_FOUND);
+    }
+        //적용 종료일
     BillingEntity entity = billingMapper.toEntity(billingDTO);
 
     // PK 생성

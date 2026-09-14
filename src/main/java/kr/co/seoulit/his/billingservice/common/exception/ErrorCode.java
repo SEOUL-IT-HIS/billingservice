@@ -17,6 +17,8 @@ public enum ErrorCode {
     BILLING_DEFAULT_PRICE_NOT_FOUND(HttpStatus.NOT_FOUND,"기본 단가를 찾을 수 없습니다."),
     BILLING_CATEGORY_CODE_NOT_FOUND(HttpStatus.NOT_FOUND,"분류 코드를 찾을 수 없습니다."),
     BILLING_EFFECTIVE_FORM_NOT_FOUND(HttpStatus.NOT_FOUND,"적용 시작일을 찾을 수 없습니다."),
+    BILLING_EFFECTIVE_TO_NOT_FOUND(HttpStatus.NOT_FOUND,"적용 종료일을 찾을 수 없습니다."),
+    BILLING_INSURANCE_TYPE_CODE_NOT_FOUND(HttpStatus.NOT_FOUND,"급여/비급여 코드를 찾을 수 없습니다."),
 
     // <--생성일시,수정일시는 어느 서비스던 포함돼서 진정한 공통이라고 말할수있다.-->
     CREATED_AT_NOT_FOUND(HttpStatus.NOT_FOUND,"생성 일시를 찾을 수 없습니다."),
