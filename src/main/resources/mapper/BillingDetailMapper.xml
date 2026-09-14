@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository">
+
+    <!-- ========================================================= -->
+    <!-- 1. 조건 검색: 수납할 방문/입원 건 찾기                     -->
+    <!-- 환자 이름/주소/전화번호는 환자서비스 REST API에서 조회.    -->
+    <!-- patientName은 서비스 레이어에서 환자서비스 조회 후 얻은    -->
+    <!-- patientIds로 변환되어 여기로 전달됨                        -->
+    <!-- ========================================================= -->
+<select id="searchBillingDetails"
+        parameterType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailSearchDTO"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingSummaryDTO">
+
+    SELECT
+        b.billing_id     AS billingId,
+        b.patient_id     AS patientId,
+        b.billing_status AS billingStatus
+
+    FROM billing b
+
+    <where>
+
+        b.billing_status = 'READY'
+
+        <if test="patientIds != null and patientIds.size() > 0">
+            AND b.patient_id IN
+            <foreach item="pid"
+                     collection="patientIds"
+                     open="("
+                     separator=","
+                     close=")">
+                #{pid}
+            </foreach>
+        </if>
+
+    </where>
+
+    ORDER BY b.billing_id DESC
+
+</select>
+
+    <!-- ========================================================= -->
+    <!-- 2. billingId 기준 진료비 상세조회 (헤더 + 상세 항목 통합)   -->
+    <!-- billing_detail 행 개수만큼 여러 행이 나오고, 헤더/합계값은  -->
+    <!-- 윈도우 함수(OVER)로 매 행에 동일하게 반복됨. 서비스 레이어  -->
+    <!-- 에서 첫 행만 꺼내 헤더를 조립하고, 전체를 items로 사용함.   -->
+    <!-- 환자의 이의제기를 납득시킬 만한 상세조회도 겸함             -->
+    <!-- ========================================================= -->
+
+    <select id="findBillingDetailFull"
+        parameterType="string"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
+
+    SELECT
+        b.billing_id                 AS billingId,
+        b.patient_id                 AS patientId,
+        b.reception_id               AS receptionId,
+        b.admission_id               AS admissionId,
+        b.billing_status             AS billingStatus,
+
+        bd.quantity                  AS quantity,
+        bd.unit_price                AS unitPrice,
+        bd.amount                    AS amount,
+        bd.detail_status             AS detailStatus,
+        bd.occurred_at               AS occurredAt,
+        bd.billing_type              AS billingType,
+
+        bm.fee_code                  AS feeCode,
+        bm.fee_name                  AS itemName,
+
+        NVL(SUM(bd.amount) OVER (PARTITION BY b.billing_id), 0)   AS totalAmount
+
+    FROM billing b
+
+             JOIN billing_detail bd
+                  ON b.billing_id = bd.billing_id
+
+             JOIN billing_master bm
+                  ON bd.billing_master_id = bm.billing_master_id
+
+    WHERE b.billing_id = #{billingId}
+      AND b.billing_status = 'READY'
+      AND bd.detail_status = 'READY'
+
+    ORDER BY bd.occurred_at ASC
+
+</select>
+
+
+    <!-- ========================================================= -->
+    <!-- 3. 결제 전 수납정보 존재 및 READY 상태 확인 (billingId 기준) -->
+    <!-- ========================================================= -->
+
+    <select id="selectBillingDetailForStatusUpdate"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingStatusDTO">
+
+        SELECT
+            b.billing_id         AS billingId,
+            b.billing_status     AS billingStatus
+
+        FROM billing b
+
+        WHERE b.billing_id = #{billingId}
+          AND b.billing_status = 'READY'
+
+    </select>
+
+
+    <!-- ========================================================= -->
+    <!-- 4. 결제 처리: READY → SUCCESS                              -->
+    <!-- ========================================================= -->
+
+    <update id="updateBillingStatusToSuccess"
+            parameterType="string">
+
+        UPDATE billing
+
+        SET billing_status = 'SUCCESS',
+            updated_at = CURRENT_TIMESTAMP
+
+        WHERE billing_id = #{billingId}
+          AND billing_status = 'READY'
+
+    </update>
+
+
+    <!-- ========================================================= -->
+    <!-- 5. 타 서비스에서 넘어온 진료비 항목을 billing_detail에 등록  -->
+    <!-- ========================================================= -->
+
+    <insert id="insertBillingDetail"
+            parameterType="kr.co.seoulit.his.billingservice.charge.dto.BillingChargeResponseDTO">
+
+        INSERT INTO billing_detail (
+            billing_detail_id,
+            billing_id,
+            billing_master_id,
+            source_service_code,
+            source_record_id,
+            fee_code,
+            item_name,
+            unit_price,
+            quantity,
+            amount,
+            detail_status,
+            occurred_at,
+            created_at,
+            patient_id,
+            reception_id,
+            admission_id,
+            billing_type
+        )
+        VALUES (
+            #{billingDetailId},
+            #{billingId},
+            #{billingMasterId},
+            #{sourceServiceCode},
+            #{sourceRecordId},
+            #{feeCode},
+            #{itemName},
+            #{unitPrice},
+            #{quantity},
+            #{amount},
+            'READY',
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            #{patientId},
+            #{receptionId, jdbcType=VARCHAR},
+            #{admissionId, jdbcType=VARCHAR},
+            #{billingType}
+        )
+
+    </insert>
+
+    <select id="countReadyBilling"
+            statementType="CALLABLE"
+            parameterType="map">
+        {call billing_ready_paient(
+              #{ready_count, mode=OUT, jdbcType=NUMERIC}
+              )}
+    </select>
+    <!--    프로시저 과제 테스트-->
+
+
+
+</mapper>

@@ -2,7 +2,7 @@ package kr.co.seoulit.his.billingservice.master.dto;
 
 import lombok.*;
 
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 
-public class BillingDTO{
+public class BillingMasterDTO{
        private String billingMasterId;
        private String sourceServiceCode;
        private String feeCode;

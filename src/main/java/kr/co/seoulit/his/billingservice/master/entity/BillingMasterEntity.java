@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BillingEntity {
+
+public class BillingMasterEntity {
 
     @Id
     @Column(name = "BILLING_MASTER_ID", length = 50, nullable = false)
@@ -56,11 +57,14 @@ public class BillingEntity {
 
     @PrePersist
     protected void onCreate() {
-        if (useYn == null) useYn = "Y";
-        if (defaultPrice == null) defaultPrice = BigDecimal.ZERO;
         LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
+
+        this.createdAt = now;
+        this.updatedAt = now;
+
+        if (this.useYn == null || this.useYn.isBlank()) {
+            this.useYn = "Y";
+        }
     }
 
     @PreUpdate
