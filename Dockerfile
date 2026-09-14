@@ -5,5 +5,5 @@ WORKDIR /app
 
 ADD ./build/libs/*.jar /app/app.jar
 
-EXPOSE 80
+EXPOSE 8989
 ENTRYPOINT ["java","-jar","app.jar"]
