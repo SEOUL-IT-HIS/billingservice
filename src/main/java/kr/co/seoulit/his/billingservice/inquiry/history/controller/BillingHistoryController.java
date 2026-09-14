@@ -33,7 +33,7 @@ public class BillingHistoryController {
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.OK.getMessage(),result));
     }
 
-    @GetMapping("/patinet/{patientId}")
+    @GetMapping("/patient/{patientId}")
     public ResponseEntity<ApiResponse<List<BillingHistoryDTO>>> getBillinghistory(
              @PathVariable  String patientId
     ){
