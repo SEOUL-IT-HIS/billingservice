@@ -9,8 +9,10 @@ import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.master.entity.BillingMasterEntity;
 import kr.co.seoulit.his.billingservice.master.repository.BillingMasterRepository;
+import kr.co.seoulit.his.billingservice.master.repository.CommonCodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,17 @@ public class BillingChargeServiceImpl implements BillingChargeService {
     private final BillingMasterRepository billingMasterRepository;// 수납기준정보(billing_master) 조회용
     private final BillingDetailRepository billingDetailRepository;// 수납상세정보(billing_detail) insert용
     private final BillingRepository billingRepository;            // 수납헤더정보(billing) 조회/insert/update용
+    private final CommonCodeRepository commonCodeRepository;      // ADMIN.COMMON_CODE 조회 전용
+
+    // 공통코드 "서비스구분" 그룹(외래시스템/응급시스템/병동시스템/검사시스템/수술시스템) - admin.common_code.group_id
+    @Value("${billing.master.source-service-code.group-id}")
+    private String sourceServiceCodeGroupId;
+
+    // 공통코드 "급여구분코드" 그룹 중 "비급여(NON_INS)" 코드의 CODE_ID.
+    // billing_master.insurance_type_code가 공통코드 CODE_ID(UUID)로 바뀌면서 문자열 "NON_INS" 비교가
+    // 더 이상 성립하지 않게 되어, 실제 CODE_ID 값을 프로퍼티로 주입받아 비교한다.
+    @Value("${billing.charge.insurance-type.non-ins-code-id}")
+    private String nonInsCodeId;
 
     @Override
     public void createCharge(BillingChargeRequestDTO billingChargeRequestDTO) {
@@ -36,6 +49,15 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         if (receptionId == null && admissionId == null) {
             throw new BusinessException(ErrorCode.BILLING_RECEPTION_OR_ADMISSION_ID_REQUIRED);
         } //접수id 입원id 둘다없으면 오류
+
+        // 타 서비스가 보낸 sourceServiceCode가 실제로 admin의 공통코드("서비스구분" 그룹)에 등록된 값인지 검증
+        if (billingChargeRequestDTO.getSourceServiceCode() == null// sourceServiceCode가 null이거나 공백이거나, 공통코드에 존재하지 않으면 오류
+                || billingChargeRequestDTO.getSourceServiceCode().isBlank()
+                || !commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
+                        billingChargeRequestDTO.getSourceServiceCode(), sourceServiceCodeGroupId, "Y")) {
+                            // sourceServiceCode가 공통코드에 존재하지 않으면 오류
+            throw new BusinessException(ErrorCode.BILLING_SOURCE_SERVICE_CODE_NOT_FOUND);
+        }
 
         // feeCode로 수납기준정보(billing_master)를 조회해 billingMasterId를 확보
         BillingMasterEntity billingMaster = billingMasterRepository.findByFeeCode(billingChargeRequestDTO.getFeeCode())
@@ -50,7 +72,7 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         // 비급여(NON_INS)는 전액 본인부담, 급여(그 외)는 본인부담 30% / 보험부담 70%로 고정 계산
         BigDecimal patientAmount;
         BigDecimal insuranceAmount;
-        if ("NON_INS".equals(billingMaster.getInsuranceTypeCode())) {
+        if (nonInsCodeId.equals(billingMaster.getInsuranceTypeCode())) {
             patientAmount = amount;
             insuranceAmount = BigDecimal.ZERO;
         } else {
