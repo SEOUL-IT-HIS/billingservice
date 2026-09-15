@@ -1,0 +1,270 @@
+# ============================================================
+# HIS 전체 서비스 compose  (2026-09-15 포트 통일)
+# ============================================================
+#
+# [포트 규칙]
+#   번호 00~09  →  컨테이너 안 포트 808번호  /  서버 바깥 포트 1808번호
+#   00 admin · 01 billing · 02 pharmacy · 03 reception · 04 surgery
+#   05 labimaging · 06 inpatient · 07 patient · 08 outpatient · 09 emergency
+#   프론트(hisfront) 는 예외: 28080 → 3000
+#
+# [주소 규칙]
+#   컨테이너끼리    : http://서비스이름:808번호   (예: http://admin:8080)
+#   외부(브라우저 등): http://192.168.1.126:1808번호
+#
+# [실행 전 준비]
+#   1) 이 파일 옆에 .env 파일을 만들고 한 줄 적는다. (.env 는 git 에 올리지 않는다)
+#        REDIS_PASSWORD=팀공용값
+#   2) 지금 compose 파일을 백업한다.
+#        cp docker-compose.yml docker-compose.yml.bak-0915
+#   3) admin 이미지 adminservice:v2.1 을 서버에 넣어 둔다. (공개 저장소 금지, tar → docker load)
+#   4) 프론트 이미지 kwonsugeun/hisfrontend:v2.1 을 서버에 넣어 둔다. (빌드 인자 필수 — 적용가이드.md 2-3)
+#
+# [실행]
+#   docker compose up -d
+#
+# [금지]
+#   docker compose down -v / docker volume rm  →  seaweed_data 볼륨의 직원 사진이 지워진다
+#
+# [SERVER_PORT 를 넣는 이유]
+#   팀 이미지가 아직 옛 포트로 빌드돼 있어도 SERVER_PORT 값으로 뜬다.
+#   (Spring Boot 는 환경변수가 application 설정 파일보다 우선)
+#   팀이 새 포트로 다시 빌드한 뒤에도 값이 같으므로 그대로 둔다.
+# ============================================================
+
+services:
+
+  # ---------------------------------------------------------- 공용 인프라
+
+  redis: # 로그인 세션 저장소 (admin, patient)
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  seaweedfs: # 파일 저장소 — admin 은 S3(8333), labimaging 은 Filer(8888)
+    image: chrislusf/seaweedfs:latest
+    command: ["mini", "-dir=/data"]
+    ports:
+      - "9333:9333"     # master
+      - "8888:8888"     # filer
+      - "8333:8333"     # S3 — 브라우저가 직원 사진을 직접 받는다
+      - "23646:23646"   # 관리 화면
+    volumes:
+      - seaweed_data:/data
+
+  kafka: # KRaft 단일 노드
+    # 리스너를 내부(INTERNAL)/외부(EXTERNAL)로 분리함 (2026-09-15).
+    # 이전엔 리스너가 하나(PLAINTEXT)라 브로커가 자기 주소를 "kafka:9092"로만 광고했는데,
+    # 이 이름은 같은 도커 네트워크 안의 컨테이너끼리만 resolve된다. 그래서 로컬 PC에서
+    # 개발용으로 띄운 서비스(예: IntelliJ로 직접 실행한 billingservice)가 9092로 부트스트랩까지는
+    # 성공해도, 브로커가 알려주는 코디네이터 주소(kafka:9092)를 못 찾아 UnknownHostException이
+    # 무한 반복되는 문제가 있었다(billing 팀에서 재현/보고).
+    # 컨테이너끼리는 계속 kafka:9092(INTERNAL)로 통신하고, 컨테이너 밖(로컬 개발 PC 등)은
+    # 192.168.1.126:9094(EXTERNAL)로 붙도록 분리해서 해결한다.
+    image: apache/kafka:latest
+    ports:
+      - "9092:9092"
+      - "9094:9094"   # 외부(컨테이너 밖) 클라이언트용
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:9092,EXTERNAL://192.168.1.126:9094"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # ---------------------------------------------------------- 00 admin (수근)
+
+  admin:
+    image: adminservice:v2.1   # 서버에 직접 넣은 이미지 (비밀값 때문에 공개 저장소 금지)
+    ports:
+      - "18080:8080"
+    environment:
+      SPRING_DATA_REDIS_HOST: "redis"
+      SPRING_DATA_REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      SEAWEED_ENDPOINT: "http://seaweedfs:8333"             # admin 이 사진을 올리고 지울 때
+      SEAWEED_PUBLIC_BASE_URL: "http://192.168.1.126:8333"   # 브라우저가 사진을 볼 때 (DB 에 저장된 주소와 같아야 함)
+      SEAWEED_BUCKET: "emp-photo"
+    depends_on:
+      - redis
+      - seaweedfs
+
+  # ---------------------------------------------------------- 01 billing (대훈)
+
+  billing:
+    image: whatyourname22/billingservice
+    ports:
+      - "18081:8081"
+    environment:
+      SERVER_PORT: "8081"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      PATIENT_SERVICE_BASE_URL: "http://patient:8087"
+    depends_on:
+      - kafka
+      - patient
+
+  # ---------------------------------------------------------- 02 pharmacy (우성)
+
+  pharmacy:
+    image: haera/pharmacyservice
+    ports:
+      - "18082:8082"
+    environment:
+      SERVER_PORT: "8082"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+    depends_on:
+      - kafka
+
+  # ---------------------------------------------------------- 03 reception (인경)
+
+  reception:
+    image: cik9625/reception
+    ports:
+      - "18083:8083"
+    environment:
+      SERVER_PORT: "8083"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      ADMIN_URL: "http://admin:8080"   # 키 이름 reception 팀 확인 필요
+    depends_on:
+      - kafka
+      - admin
+
+  # ---------------------------------------------------------- 04 surgery (근태)
+
+  surgery:
+    image: knoupgt/surgery
+    ports:
+      - "18084:8084"
+    environment:
+      SERVER_PORT: "8084"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      APP_ADMIN_SERVICE_HOST: "admin"
+      APP_ADMIN_SERVICE_PORT: "8080"
+    depends_on:
+      - kafka
+      - admin
+
+  # ---------------------------------------------------------- 05 labimaging (진기)
+
+  labimaging:
+    image: jinki238/labimaging
+    # 이미지 ENTRYPOINT 에 --server.port=38088 이 박혀 있어 SERVER_PORT 가 안 먹는다 → 여기서 덮어쓴다.
+    # lab-imaging 팀이 Dockerfile 을 고쳐 다시 빌드하면 이 entrypoint 줄은 지운다.
+    entrypoint: ["java", "-jar", "app.jar", "--server.port=8085"]
+    ports:
+      - "18085:8085"
+    environment:
+      SERVER_PORT: "8085"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      APP_ADMIN_SERVICE_HOST: "admin"
+      APP_ADMIN_SERVICE_PORT: "8080"
+      APP_PATIENT_SERVICE_HOST: "patient"
+      APP_PATIENT_SERVICE_PORT: "8087"
+      APP_SEAWEEDFS_FILER_URL: "http://seaweedfs:8888"
+    depends_on:
+      - kafka
+      - seaweedfs
+      - admin
+
+  # ---------------------------------------------------------- 06 inpatient (가영)
+
+  inpatient:
+    image: youngeiya/inpatient-service
+    ports:
+      - "18086:8086"
+    environment:
+      SERVER_PORT: "8086"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      APP_ADMIN_SERVICE_HOST: "admin"
+      APP_ADMIN_SERVICE_PORT: "8080"
+      APP_PATIENT_SERVICE_HOST: "patient"
+      APP_PATIENT_SERVICE_PORT: "8087"
+      APP_OUTPATIENT_SERVICE_HOST: "outpatient"
+      APP_OUTPATIENT_SERVICE_PORT: "8088"
+    depends_on:
+      - kafka
+      - admin
+
+  # ---------------------------------------------------------- 07 patient (예진)
+
+  patient:
+    image: hongyejin/patientservice
+    ports:
+      - "18087:8087"
+    environment:
+      SERVER_PORT: "8087"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      ADMIN_SERVICE_BASE_URL: "http://admin:8080"
+      SPRING_DATA_REDIS_HOST: "redis"
+      SPRING_DATA_REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    depends_on:
+      - kafka
+      - admin
+      - redis
+
+  # ---------------------------------------------------------- 08 outpatient (호령)
+
+  outpatient:
+    image: seohoryeong/outpatient-service
+    ports:
+      - "18088:8088"
+    environment:
+      SERVER_PORT: "8088"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      ADMIN_BASE_URL: "http://admin:8080"
+      PATIENT_BASE_URL: "http://patient:8087"
+      LAB_BASE_URL: "http://labimaging:8085"
+      PHARMACY_BASE_URL: "http://pharmacy:8082"
+    depends_on:
+      - kafka
+      - admin
+
+  # ---------------------------------------------------------- 09 emergency (상민)
+
+  emergency:
+    image: psangmin/emergency-service
+    ports:
+      - "18089:8089"
+    environment:
+      SERVER_PORT: "8089"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      APP_ADMIN_BASE_URL: "http://admin:8080"   # 코드가 app.admin.base-url 을 읽는다 (ADMIN_BASE_URL 로는 안 들어감)
+    depends_on:
+      - kafka
+      - admin
+
+  # ---------------------------------------------------------- 프론트 (수근)
+
+  hisfront:
+    image: kwonsugeun/hisfrontend:v2.1   # 다른 서비스 주소가 http://서비스이름:808번호 로 빌드된 이미지
+    ports:
+      - "28080:3000"   # admin CORS 허용 주소가 http://192.168.1.126:28080 — 바꾸면 admin 도 같이 바꿔야 로그인된다
+    depends_on:
+      - admin
+      - billing
+      - pharmacy
+      - reception
+      - surgery
+      - labimaging
+      - inpatient
+      - patient
+      - outpatient
+      - emergency
+
+volumes:
+  redis_data:
+  kafka_data:
+  seaweed_data:
+    external: true   # 기존 볼륨(직원 사진)을 그대로 쓴다
