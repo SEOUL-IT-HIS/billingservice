@@ -13,14 +13,15 @@ import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyApiRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyApiResponseDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyResponseDTO;
+import kr.co.seoulit.his.billingservice.kakaopay.entity.KakaoPayReadyEntity;
+import kr.co.seoulit.his.billingservice.kakaopay.repository.KakaoPayReadyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Transactional
@@ -34,6 +35,8 @@ public class KakaoPayServiceImpl implements KakaoPayService {
     // KakaoPayClient를 주입받아 카카오페이 API 호출에 사용
     private final PaymentService paymentService;
     // approve 성공 후 billing_status 갱신 + Payment insert는 새로 안 만들고 기존 로직 재사용
+    private final KakaoPayReadyRepository kakaoPayReadyRepository;
+    // ready~approve 사이의 tid 보관용. 메모리(tidStore) 대신 DB로 관리해 서버 재시작/다중 인스턴스에도 안전하게 함
 
     @Value("${kakaopay.cid}")
     private String cid;
@@ -46,10 +49,6 @@ public class KakaoPayServiceImpl implements KakaoPayService {
 
     @Value("${kakaopay.fail-url}")
     private String failUrl;
-
-    // billingId -> tid 임시 저장소. approve 요청 때 다시 꺼내 써야 함.
-    // 서버 재시작하면 날아가고, 인스턴스가 여러 대면 안 맞을 수 있음 - 나중에 DB 컬럼으로 옮기는 걸 고려해야 함
-    private final Map<String, String> tidStore = new ConcurrentHashMap<>();
 
     @Override
     public KakaoPayReadyResponseDTO paymentBillingById(KakaoPayReadyRequestDTO request) {
@@ -80,8 +79,8 @@ public class KakaoPayServiceImpl implements KakaoPayService {
         // 실제 카카오페이 호출
         KakaoPayReadyApiResponseDTO apiResponse = kakaoPayClient.ready(apiRequest);
 
-        // approve 때 다시 필요한 tid를 billingId 기준으로 저장해둠
-        tidStore.put(billingId, apiResponse.getTid());
+        // approve 때 다시 필요한 tid를 billingId 기준으로 DB에 저장해둠
+        kakaoPayReadyRepository.save(new KakaoPayReadyEntity(billingId, apiResponse.getTid(), LocalDateTime.now()));
 
         // 프론트가 기대하는 응답 모양으로 변환해서 리턴
         return KakaoPayReadyResponseDTO.builder()
@@ -94,42 +93,37 @@ public class KakaoPayServiceImpl implements KakaoPayService {
     public void approve(KakaoPayApproveRequestDTO request) {
         String billingId = request.getBillingId();
 
-        // get() 대신 remove()로 원자적으로 꺼냄 - 프론트에서 approve가 중복으로(예: React StrictMode
-        // 개발 모드 이펙트 중복 실행) 거의 동시에 두 번 들어와도, tid를 실제로 가져가는 건 둘 중 하나뿐이라
-        // 나머지 하나는 카카오페이 실제 approve API를 부르기도 전에 여기서 막힘 -
-        // "payment is already done!"(-702) 같은 카카오페이 쪽 중복 승인 에러 자체를 예방함
-        String tid = tidStore.remove(billingId);
-        if (tid == null) {
-            throw new BusinessException(ErrorCode.KAKAOPAY_TID_NOT_FOUND);
+        // find + delete로 꺼냄. ConcurrentHashMap.remove()처럼 원자적이진 않아서, approve가
+        // 거의 동시에 두 번 들어오면(예: React StrictMode 개발 모드 이펙트 중복 실행) 둘 다 delete
+        // 전에 findById를 통과해 카카오페이 approve API가 중복 호출될 여지가 이론적으로 남아있음 -
+        // "payment is already done!"(-702) 재발 가능성이 있으면 findById에 비관적 락을 추가할 것
+        String tid = kakaoPayReadyRepository.findById(billingId)
+                .map(KakaoPayReadyEntity::getTid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.KAKAOPAY_TID_NOT_FOUND));
+        kakaoPayReadyRepository.deleteById(billingId);
+
+        // ready 때와 동일하게 patientId 재조회 (partner_user_id는 ready 때 보낸 값과 같아야 함)
+        List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(billingId);
+        if (items.isEmpty()) {
+            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
         }
+        BillingDetailItemDTO header = items.get(0);
 
-        try {
-            // ready 때와 동일하게 patientId 재조회 (partner_user_id는 ready 때 보낸 값과 같아야 함)
-            List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(billingId);
-            if (items.isEmpty()) {
-                throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
-            }
-            BillingDetailItemDTO header = items.get(0);
+        KakaoPayApiApproveRequestDTO apiRequest = KakaoPayApiApproveRequestDTO.builder()
+                .cid(cid)
+                .tid(tid)
+                .partnerOrderId(billingId)
+                .partnerUserId(header.getPatientId())
+                .pgToken(request.getPgToken())
+                .build();
 
-            KakaoPayApiApproveRequestDTO apiRequest = KakaoPayApiApproveRequestDTO.builder()
-                    .cid(cid)
-                    .tid(tid)
-                    .partnerOrderId(billingId)
-                    .partnerUserId(header.getPatientId())
-                    .pgToken(request.getPgToken())
-                    .build();
+        // 카카오페이가 승인을 거절하면 RestTemplate이 예외를 던지고, 메서드 전체가 @Transactional이라
+        // 이 예외가 위로 전파되면서 앞의 deleteById까지 포함해 전부 롤백됨 - tid row가 그대로 남아
+        // 재시도할 수 있으므로, 실패 시 tid를 다시 저장하는 별도 처리가 필요 없음
+        kakaoPayClient.approve(apiRequest);
 
-            // 카카오페이가 승인을 거절하면 RestTemplate이 예외를 던지고, 그 예외가 그대로 위로 전파되어
-            // 트랜잭션이 롤백됨(아래 processPayment까지 안 감) - 실패 시 우리 DB엔 아무 흔적도 안 남음
-            kakaoPayClient.approve(apiRequest);
-
-            // 카카오페이 승인 확인 끝났으니, 그 다음은 CASH/CARD와 완전히 동일한 마무리 로직 재사용
-            paymentService.processPayment(new PaymentRequestDTO(billingId, "KAKAO_PAY"));
-        } catch (RuntimeException e) {
-            // 진짜 실패(네트워크 오류 등)라면 재시도할 수 있게 tid를 되돌려놓음
-            tidStore.put(billingId, tid);
-            throw e;
-        }
+        // 카카오페이 승인 확인 끝났으니, 그 다음은 CASH/CARD와 완전히 동일한 마무리 로직 재사용
+        paymentService.processPayment(new PaymentRequestDTO(billingId, "KAKAO_PAY"));
     }
 
 }
