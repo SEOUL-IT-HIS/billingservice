@@ -60,6 +60,7 @@ public class BillingHistoryServiceImpl implements BillingHistoryService {
                 summary.setPhoneNo(patient.getPhoneNo());
                 summary.setAddress(patient.getAddress());
                 summary.setAddressDetail(patient.getAddressDetail());
+                summary.setBirthDate(patient.getBirthDate());
             }
         });
 
