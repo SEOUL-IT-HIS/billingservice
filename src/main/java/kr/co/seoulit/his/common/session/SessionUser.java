@@ -1,4 +1,4 @@
-package kr.co.seoulit.his.billingservice.common.session;
+package kr.co.seoulit.his.common.session;
 
 import lombok.Data;
 

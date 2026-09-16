@@ -20,6 +20,9 @@ public class BillingChargeKafkaConsumer {
     // 병동서비스는 "퇴원신청" 신호를 실제 수가 대신 이 feeCode로 charge 등록 토픽에 함께 보낸다.
     // billing_master에 등록된 수가가 아니므로 createCharge()로 넘기면 BILLING_FEE_CODE_NOT_FOUND가 나서,
     // 수납기준정보 등록 대상이 아닌 이 신호는 그냥 무시한다.
+    // (수납팀-병동팀 합의: billing_master 조회 없이 소비 즉시 무시. 검사서비스 메시지와 동일하게
+    //  별도 검증/경고 없이 지나간다 - admissionId의 billing이 아직 없어도 정상 상황일 수 있다:
+    //  퇴원신청 신호가 그날의 마지막 입원료 charge보다 먼저 도착하는 순서도 있기 때문.)
     private static final String DISCHARGE_REQUEST_FEE_CODE = "DISCHARGE_REQUEST";
 
     private final BillingChargeService billingChargeService;
@@ -38,7 +41,6 @@ public class BillingChargeKafkaConsumer {
                 request.getSourceServiceCode(), request.getFeeCode());
 
         if (DISCHARGE_REQUEST_FEE_CODE.equals(request.getFeeCode())) {
-            billingChargeService.checkDischargeReadiness(request.getAdmissionId());
             return;
         }
 
