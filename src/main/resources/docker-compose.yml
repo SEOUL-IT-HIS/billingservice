@@ -103,7 +103,7 @@ services:
   # ---------------------------------------------------------- 01 billing (대훈)
 
   billing:
-    image: whatyourname22/billingservice
+    image: whatyourname22/billingservice:1.0.1
     ports:
       - "18081:8081"
     environment:
