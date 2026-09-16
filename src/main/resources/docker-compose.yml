@@ -110,9 +110,17 @@ services:
       SERVER_PORT: "8081"
       SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
       PATIENT_SERVICE_BASE_URL: "http://patient:8087"
+      SPRING_DATA_REDIS_HOST: "redis"
+      SPRING_DATA_REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      # 카카오페이가 결제 완료 후 사용자를 돌려보낼 프론트 주소 - 배포된 프론트(28080)로 맞춤
+      KAKAOPAY_APPROVAL_URL: "http://192.168.1.126:28080/billing/payment/kakaopay/return"
+      KAKAOPAY_CANCEL_URL: "http://192.168.1.126:28080/billing/payment/kakaopay/cancel"
+      KAKAOPAY_FAIL_URL: "http://192.168.1.126:28080/billing/payment/kakaopay/fail"
     depends_on:
       - kafka
       - patient
+      - redis
 
   # ---------------------------------------------------------- 02 pharmacy (우성)
 
