@@ -11,6 +11,10 @@ spring.datasource.username=<db_username>
 spring.datasource.password=<db_password>
 spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
 
+# 공용 DB 세션 한도가 작으면 서비스마다 낮춰서 쓸 것 (기본 Hikari pool은 10)
+spring.datasource.hikari.maximum-pool-size=3
+spring.datasource.hikari.minimum-idle=1
+
 # JPA
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.OracleDialect
 spring.jpa.properties.hibernate.format_sql=true
@@ -27,8 +31,13 @@ mybatis.mapper-locations=classpath:/mapper/*.xml
 patient.service.base-url=<patient_service_base_url>
 
 # KakaoPay
+# approval/cancel/fail URL은 카카오 서버가 결제 후 "사용자 브라우저"를 리다이렉트시키는 주소다.
+# localhost로 두면 카카오 서버나 다른 PC의 사용자가 못 찾는다 - 프론트가 실제로 뜨는 주소로 맞출 것.
 kakaopay.cid=<kakaopay_cid>
 kakaopay.secret-key=<kakaopay_secret_key>
 kakaopay.approval-url=<kakaopay_approval_url>
 kakaopay.cancel-url=<kakaopay_cancel_url>
 kakaopay.fail-url=<kakaopay_fail_url>
+
+# CORS 허용 origin 패턴 - 프론트가 접속하는 모든 주소를 콤마로 나열 (WebConfig.java가 읽어서 사용)
+app.cors.allowed-origin-patterns=<comma_separated_allowed_origins>

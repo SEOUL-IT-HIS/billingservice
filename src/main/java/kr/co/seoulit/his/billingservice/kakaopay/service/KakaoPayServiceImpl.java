@@ -93,11 +93,11 @@ public class KakaoPayServiceImpl implements KakaoPayService {
     public void approve(KakaoPayApproveRequestDTO request) {
         String billingId = request.getBillingId();
 
-        // find + delete로 꺼냄. ConcurrentHashMap.remove()처럼 원자적이진 않아서, approve가
-        // 거의 동시에 두 번 들어오면(예: React StrictMode 개발 모드 이펙트 중복 실행) 둘 다 delete
-        // 전에 findById를 통과해 카카오페이 approve API가 중복 호출될 여지가 이론적으로 남아있음 -
-        // "payment is already done!"(-702) 재발 가능성이 있으면 findById에 비관적 락을 추가할 것
-        String tid = kakaoPayReadyRepository.findById(billingId)
+        // find + delete로 꺼냄. 비관적 락(findByIdForUpdate)으로 조회하므로, approve가 거의
+        // 동시에 두 번 들어와도(예: 콜백 페이지 새로고침) 두 번째 요청은 첫 번째 트랜잭션이
+        // deleteById까지 끝날 때까지 대기했다가 빈 Optional을 받아 KAKAOPAY_TID_NOT_FOUND로
+        // 끝나므로, 같은 tid로 카카오페이 approve API가 중복 호출되지 않는다.
+        String tid = kakaoPayReadyRepository.findByIdForUpdate(billingId)
                 .map(KakaoPayReadyEntity::getTid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.KAKAOPAY_TID_NOT_FOUND));
         kakaoPayReadyRepository.deleteById(billingId);

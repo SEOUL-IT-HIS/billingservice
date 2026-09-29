@@ -1,17 +1,23 @@
 package kr.co.seoulit.his.billingservice.kakaopay.client;
 
+import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
+import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayApiApproveRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayApiApproveResponseDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyApiRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyApiResponseDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 
@@ -36,7 +42,19 @@ public class KakaoPayClient {
 
         HttpEntity<KakaoPayReadyApiRequestDTO> entity = new HttpEntity<>(request, headers);
 
-        return restTemplate.postForObject(READY_URL, entity, KakaoPayReadyApiResponseDTO.class);
+        try {
+            return restTemplate.postForObject(READY_URL, entity, KakaoPayReadyApiResponseDTO.class);
+        } catch (HttpStatusCodeException e) {
+            // 카카오페이가 4xx/5xx로 거절한 경우 - 실제 원인(-703 등)은 응답 바디에 있으므로 로그로 남긴다
+            log.error("카카오페이 ready 요청 거절 (partnerOrderId={}): status={}, body={}",
+                    request.getPartnerOrderId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw new BusinessException(ErrorCode.KAKAOPAY_API_ERROR);
+        } catch (ResourceAccessException e) {
+            // 타임아웃/연결 실패 등 네트워크 문제
+            log.error("카카오페이 ready 요청 중 네트워크 오류 (partnerOrderId={}): {}",
+                    request.getPartnerOrderId(), e.getMessage(), e);
+            throw new BusinessException(ErrorCode.KAKAOPAY_API_ERROR);
+        }
     }
 
     // ready랑 구조는 완전히 동일 - URL이랑 주고받는 DTO만 approve용으로 바뀜
@@ -47,7 +65,17 @@ public class KakaoPayClient {
 
         HttpEntity<KakaoPayApiApproveRequestDTO> entity = new HttpEntity<>(request, headers);
 
-        return restTemplate.postForObject(APPROVE_URL, entity, KakaoPayApiApproveResponseDTO.class);
+        try {
+            return restTemplate.postForObject(APPROVE_URL, entity, KakaoPayApiApproveResponseDTO.class);
+        } catch (HttpStatusCodeException e) {
+            // 예: -702 "payment is already done!" 같은 카카오 쪽 거절 사유가 body에 담겨 온다
+            log.error("카카오페이 approve 요청 거절 (partnerOrderId={}, tid={}): status={}, body={}",
+                    request.getPartnerOrderId(), request.getTid(), e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw new BusinessException(ErrorCode.KAKAOPAY_API_ERROR);
+        } catch (ResourceAccessException e) {
+            log.error("카카오페이 approve 요청 중 네트워크 오류 (partnerOrderId={}, tid={}): {}",
+                    request.getPartnerOrderId(), request.getTid(), e.getMessage(), e);
+            throw new BusinessException(ErrorCode.KAKAOPAY_API_ERROR);
+        }
     }
 }
-

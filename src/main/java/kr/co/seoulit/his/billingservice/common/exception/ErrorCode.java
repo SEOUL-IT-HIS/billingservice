@@ -43,6 +43,8 @@ public enum ErrorCode {
 
     KAKAOPAY_TID_NOT_FOUND(HttpStatus.NOT_FOUND, "Kakao Pay payment preparation information not found. Please retry from the ready step."),
     // 카카오페이 결제 준비 정보를 찾을 수 없습니다. ready부터 다시 시도해주세요.
+    KAKAOPAY_API_ERROR(HttpStatus.BAD_GATEWAY, "Failed to communicate with KakaoPay. Please try again."),
+    // 카카오페이와 통신에 실패했습니다. 다시 시도해주세요. (실제 원인은 서버 로그의 status/body 참고)
 
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Patient information not found."),
     // 환자 정보를 찾을 수 없습니다.
