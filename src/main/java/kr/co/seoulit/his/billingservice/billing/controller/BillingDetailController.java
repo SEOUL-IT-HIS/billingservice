@@ -5,6 +5,7 @@ import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
 import kr.co.seoulit.his.billingservice.billing.service.BillingDetailService;
 import kr.co.seoulit.his.billingservice.billing.service.PaymentService;
+import kr.co.seoulit.his.billingservice.billing.dto.PayCancelIdDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -68,6 +69,19 @@ public class BillingDetailController {
         );
     }
     //결제 화면 - 팝업. 누르면 billing_status,payment_status 를 ready->success
+    @PatchMapping("/cancel/{patientId}")
+    public ResponseEntity<ApiResponse<PayCancelIdDTO>> paymentCancel(
+            @RequestParam PayCancelIdDTO request
+    ){
+        paymentService.paymentCancel(request);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        null
+                )
+        );
+    }
+    //이미 수납된 건을 취소하면서 success에서 cancle로 변경 (현금,카드 만 해당- 카카오페이는 카카오페이 컨트롤러 영역)
+
 
    
     @GetMapping("/procedure-test")

@@ -1,5 +1,6 @@
 package kr.co.seoulit.his.billingservice.billing.service;
 
+import kr.co.seoulit.his.billingservice.billing.dto.PayCancelIdDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.PaymentRequestDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO;
 import kr.co.seoulit.his.billingservice.billing.entity.PaymentEntity;
@@ -78,4 +79,16 @@ public class PaymentServiceImpl implements PaymentService {
         int sequence = ThreadLocalRandom.current().nextInt(100_000);
         return prefix + "-" + String.format("%05d", sequence);
     }
+
+    @Override
+    public PayCancelIdDTO paymentCancel(PayCancelIdDTO request) {
+        String patientId = request.getPatientId();
+
+        if (patientId == null) {
+            throw new BusinessException(
+                    ErrorCode.PATIENT_NOT_FOUND);
+        }
+    }
+    // 결제 취소 처리 (카드, 현금 등 결제 수단에 따라 실제 취소 로직은 다를 수 있음)
+
 }

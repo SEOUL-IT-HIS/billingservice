@@ -3,6 +3,7 @@ package kr.co.seoulit.his.billingservice.kakaopay.controller;
 import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayApproveRequestDTO;
+import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayCancelIdDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyResponseDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.service.KakaoPayService;
@@ -35,6 +36,16 @@ public class KakaoPayController {
     @PostMapping("/approve")
     public ResponseEntity<ApiResponse<Void>> approve(@RequestBody KakaoPayApproveRequestDTO request) {
         kakaoPayService.approve(request);
+        return ResponseEntity.ok(
+                ApiResponse.success(SuccessCode.OK.getMessage(), null)
+        );
+    }
+
+    @PatchMapping("/cancel")
+    public ResponseEntity<ApiResponse<KakaoPayCancelIdDTO>> cancel(
+            @RequestBody KakaoPayCancelIdDTO request
+    ){
+        kakaoPayService.cancel(request);
         return ResponseEntity.ok(
                 ApiResponse.success(SuccessCode.OK.getMessage(), null)
         );
