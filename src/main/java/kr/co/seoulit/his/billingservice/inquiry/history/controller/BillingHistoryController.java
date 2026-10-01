@@ -4,6 +4,7 @@ import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySearch
 import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDTO;
+import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDetailDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySummaryDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.service.BillingHistoryService;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,19 @@ public class BillingHistoryController {
                 ApiResponse.success(
                         SuccessCode.OK.getMessage(),
                         billingHistoryService.getBillinghistoryByPatient(patientId)
+                )
+        );
+    }
+
+    // 수납이력 상세보기 - 결제 완료된 billing 한 건의 결제 정보 + 진료 항목
+    @GetMapping("/{billingId}")
+    public ResponseEntity<ApiResponse<BillingHistoryDetailDTO>> getBillingHistoryDetail(
+            @PathVariable String billingId
+    ){
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessCode.OK.getMessage(),
+                        billingHistoryService.getBillingHistoryDetail(billingId)
                 )
         );
     }

@@ -18,7 +18,19 @@
     SELECT
         b.billing_id     AS billingId,
         b.patient_id     AS patientId,
-        b.billing_status AS billingStatus
+        b.billing_status AS billingStatus,
+
+        CASE
+            WHEN b.reception_id IS NOT NULL THEN 'OUTPATIENT'
+            ELSE 'INPATIENT'
+        END AS billingType,
+
+        (SELECT NVL(SUM(bd.amount), 0)
+           FROM billing_detail bd
+          WHERE bd.billing_id = b.billing_id
+            AND bd.detail_status = 'READY') AS totalAmount,
+
+        TO_CHAR(b.created_at, 'YYYY-MM-DD HH24:MI') AS createdAt
 
     FROM billing b
 

@@ -96,9 +96,10 @@ public class BillingChargeServiceImpl implements BillingChargeService {
                 .billingMasterId(billingMaster.getBillingMasterId())
                 .build();
 
+        // 결제 전(READY) billing이 있으면 거기에 합산, 없으면(처음이거나 이전 건이 이미 결제됨) 새 billing 생성
         BillingEntity billing = receptionId != null
-                ? billingRepository.findByReceptionId(receptionId).orElse(null)
-                : billingRepository.findByAdmissionId(admissionId).orElse(null);
+                ? billingRepository.findByReceptionIdAndBillingStatus(receptionId, "READY").orElse(null)
+                : billingRepository.findByAdmissionIdAndBillingStatus(admissionId, "READY").orElse(null);
 
         if (billing == null) {
 

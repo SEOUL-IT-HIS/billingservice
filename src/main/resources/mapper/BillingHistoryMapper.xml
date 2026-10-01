@@ -101,4 +101,74 @@
 
     </select>
 
+
+    <!-- ========================================================= -->
+    <!-- 3. 수납이력 상세보기 - 결제 완료 billing 한 건의 결제 정보  -->
+    <!-- ========================================================= -->
+    <select id="findPaidBillingHeader"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDTO">
+
+        SELECT
+            b.billing_id            AS billingId,
+            b.patient_id            AS patientId,
+
+            CASE
+                WHEN b.reception_id IS NOT NULL THEN 'OUTPATIENT'
+                ELSE 'INPATIENT'
+            END AS billingType,
+
+            p.payment_id            AS paymentId,
+            p.payment_amount        AS paymentAmount,
+            p.payment_method_code   AS paymentMethod,
+            p.payment_at            AS paymentAt,
+            p.receipt_no            AS receiptNo,
+
+            b.billing_status        AS billingStatus
+
+        FROM billing b
+
+        JOIN payment p
+            ON p.billing_id = b.billing_id
+           AND p.payment_status = 'APPROVED'
+
+        WHERE b.billing_id = #{billingId}
+          AND b.billing_status = 'SUCCESS'
+
+    </select>
+
+
+    <!-- ========================================================= -->
+    <!-- 4. 수납이력 상세보기 - 결제 완료 billing 한 건의 진료 항목  -->
+    <!-- 결제 화면용 findBillingDetailFull은 READY 건만 보도록 조건이 -->
+    <!-- 고정돼 있어 결제 완료 건에는 쓸 수 없으므로 따로 둠.        -->
+    <!-- (결제 시 billing만 SUCCESS로 바뀌고 billing_detail.detail_  -->
+    <!--  status는 READY로 남으므로 detail_status 조건은 걸지 않음)  -->
+    <!-- ========================================================= -->
+    <select id="findPaidBillingItems"
+            parameterType="string"
+            resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
+
+        SELECT
+            bd.quantity             AS quantity,
+            bd.unit_price           AS unitPrice,
+            bd.amount               AS amount,
+            bd.detail_status        AS detailStatus,
+            bd.occurred_at          AS occurredAt,
+            bd.billing_type         AS billingType,
+
+            bm.fee_code             AS feeCode,
+            bm.fee_name             AS itemName
+
+        FROM billing_detail bd
+
+        JOIN billing_master bm
+            ON bd.billing_master_id = bm.billing_master_id
+
+        WHERE bd.billing_id = #{billingId}
+
+        ORDER BY bd.occurred_at ASC
+
+    </select>
+
 </mapper>

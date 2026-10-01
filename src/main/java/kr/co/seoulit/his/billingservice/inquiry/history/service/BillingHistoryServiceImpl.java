@@ -1,10 +1,12 @@
 package kr.co.seoulit.his.billingservice.inquiry.history.service;
 
+import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO;
 import kr.co.seoulit.his.billingservice.businessdelegate.patient.PatientBusinessDelegate;
 import kr.co.seoulit.his.billingservice.businessdelegate.patient.PatientDTO;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDTO;
+import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistoryDetailDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySearchDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.dto.BillingHistorySummaryDTO;
 import kr.co.seoulit.his.billingservice.inquiry.history.repository.BillingHistoryRepository;
@@ -81,5 +83,39 @@ public class BillingHistoryServiceImpl implements BillingHistoryService {
         histories.forEach(history -> history.setPatientName(patient.getPatientName()));
 
         return histories;
+    }
+
+    // 수납이력 상세보기 - 결제 완료된 billing 한 건의 결제 정보 + 진료 항목
+    @Override
+    public BillingHistoryDetailDTO getBillingHistoryDetail(String billingId) {
+
+        BillingHistoryDTO header = billingHistoryRepository.findPaidBillingHeader(billingId);
+
+        // 결제 완료 건이 아니거나 존재하지 않으면 예외 처리
+        if (header == null) {
+            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        }
+
+        List<BillingDetailItemDTO> items = billingHistoryRepository.findPaidBillingItems(billingId);
+
+        PatientDTO patient = patientBusinessDelegate.getPatientById(header.getPatientId());
+
+        if (patient == null) { throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND); }
+
+        return BillingHistoryDetailDTO.builder()
+                .billingId(header.getBillingId())
+                .billingType(header.getBillingType())
+                .billingStatus(header.getBillingStatus())
+                .patientId(patient.getPatientId())
+                .patientName(patient.getPatientName())
+                .phoneNo(patient.getPhoneNo())
+                .birthDate(patient.getBirthDate())
+                .paymentId(header.getPaymentId())
+                .paymentAmount(header.getPaymentAmount())
+                .paymentMethod(header.getPaymentMethod())
+                .paymentAt(header.getPaymentAt())
+                .receiptNo(header.getReceiptNo())
+                .items(items)
+                .build();
     }
 }
