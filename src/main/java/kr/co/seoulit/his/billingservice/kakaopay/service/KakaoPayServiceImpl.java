@@ -9,6 +9,7 @@ import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.kakaopay.client.KakaoPayClient;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayApiApproveRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayApproveRequestDTO;
+import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayCancelIdDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyApiRequestDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyApiResponseDTO;
 import kr.co.seoulit.his.billingservice.kakaopay.dto.KakaoPayReadyRequestDTO;
@@ -124,6 +125,16 @@ public class KakaoPayServiceImpl implements KakaoPayService {
 
         // 카카오페이 승인 확인 끝났으니, 그 다음은 CASH/CARD와 완전히 동일한 마무리 로직 재사용
         paymentService.processPayment(new PaymentRequestDTO(billingId, "KAKAO_PAY"));
+    }
+
+    // TODO: 카카오페이 결제취소 API 호출 로직 구현 예정 (지금은 컴파일용 기본 검증만)
+    @Override
+    public KakaoPayCancelIdDTO cancel(KakaoPayCancelIdDTO request) {
+        if (request.getPatientId() == null) {
+            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
+        }
+
+        return request;
     }
 
 }

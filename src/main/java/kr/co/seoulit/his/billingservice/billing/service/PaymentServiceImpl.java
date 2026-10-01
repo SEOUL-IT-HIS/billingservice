@@ -4,11 +4,13 @@ import kr.co.seoulit.his.billingservice.billing.dto.PayCancelIdDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.PaymentRequestDTO;
 import kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO;
 import kr.co.seoulit.his.billingservice.billing.entity.PaymentEntity;
+import kr.co.seoulit.his.billingservice.billing.event.SettlementCompletedEvent;
 import kr.co.seoulit.his.billingservice.billing.repository.BillingDetailRepository;
 import kr.co.seoulit.his.billingservice.billing.repository.PaymentRepository;
 import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final BillingDetailRepository billingDetailRepository;
     private final PaymentRepository paymentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void processPayment(PaymentRequestDTO request) {
@@ -65,6 +68,12 @@ public class PaymentServiceImpl implements PaymentService {
 
             try {
                 paymentRepository.saveAndFlush(payment);
+
+                // 입원 건이면 병동에 퇴원정산 완료를 알린다 (외래 건은 admissionId가 없어서 대상 아님).
+                // 실제 카프카 발행은 커밋 후 SettlementCompletedKafkaPublisher에서 한다.
+                if (header.getAdmissionId() != null) {
+                    eventPublisher.publishEvent(new SettlementCompletedEvent(header.getAdmissionId()));
+                }
                 return;
             } catch (DataIntegrityViolationException e) {
                 if (attempt == RECEIPT_NO_MAX_ATTEMPTS) {
@@ -88,6 +97,8 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException(
                     ErrorCode.PATIENT_NOT_FOUND);
         }
+
+        return request;
     }
     // 결제 취소 처리 (카드, 현금 등 결제 수단에 따라 실제 취소 로직은 다를 수 있음)
 
