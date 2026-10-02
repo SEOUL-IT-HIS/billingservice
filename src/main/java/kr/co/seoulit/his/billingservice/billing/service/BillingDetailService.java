@@ -14,6 +14,9 @@ public interface BillingDetailService {
     BillingDetailResponseDTO getBillingDetails(String billingId);
     //상세보기 버튼 클릭 후 billingId 기준 헤더 + 상세 항목(items) 통합 조회
 
+    BillingDetailResponseDTO getPatientBillingDetails(String patientId);
+    //환자 선택 후 그 환자의 미수납 건 전체를 합산해서 조회 (한 번에 수납)
+
     void updateBillingStatusToSuccess(String billingId);
     //상태값 ready->success 로 변경
 

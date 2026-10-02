@@ -56,6 +56,21 @@ public class BillingDetailController {
         );
     }// 중복 포함 검색 결과된 리스트중 정보에 맞는 환자 찾고 진료비 상세조회
 
+    @Operation(summary = "환자 미수납 건 합산 상세조회", description = "환자의 미수납 건 전체를 합쳐서 조회합니다.")
+    @GetMapping("/patients/{patientId}")
+    public ResponseEntity<ApiResponse<BillingDetailResponseDTO>> getPatientBillingDetails(
+            @PathVariable String patientId) {
+        BillingDetailResponseDTO result =
+                billingDetailService.getPatientBillingDetails(patientId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessCode.OK.getMessage(),
+                        result
+                )
+        );
+    }// 검색 목록에서 환자 선택 시 - 외래/입원 미수납 건을 한 화면에 모아 합산
+
     @PostMapping("/payment")
     public ResponseEntity<ApiResponse<Void>> processPayment(
             @RequestBody PaymentRequestDTO request

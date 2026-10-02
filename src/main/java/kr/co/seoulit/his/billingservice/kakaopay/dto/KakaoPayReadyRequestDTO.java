@@ -2,6 +2,8 @@ package kr.co.seoulit.his.billingservice.kakaopay.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 /**
  * 프론트 -> 우리 백엔드 (POST /api/billing/payment/kakaopay/ready)
  * billingId만 받는다. 금액/상품명 같은 실제 결제 정보는 서비스 레이어에서
@@ -15,4 +17,6 @@ import lombok.*;
 public class KakaoPayReadyRequestDTO {
 
     private String billingId;
+    private List<String> billingIds;
+    // 환자의 미수납 건을 한 번에 결제할 때 사용. 값이 있으면 billingId 대신 이 목록 전체를 결제
 }

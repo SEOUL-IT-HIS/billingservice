@@ -2,6 +2,8 @@ package kr.co.seoulit.his.billingservice.kakaopay.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 /**
  * 프론트 -> 우리 백엔드 (POST /api/billing/payment/kakaopay/approve)
  * 카카오페이 결제창에서 결제를 마치고 콜백 페이지로 돌아온 뒤, 그 화면이 넘겨주는 값.
@@ -16,5 +18,6 @@ import lombok.*;
 public class KakaoPayApproveRequestDTO {
 
     private String billingId;
+    private List<String> billingIds; // 여러 건 한 번에 결제한 경우 ready 때와 같은 목록 (첫 번째가 billingId와 같음)
     private String pgToken;
 }

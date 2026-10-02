@@ -53,26 +53,39 @@ public class KakaoPayServiceImpl implements KakaoPayService {
 
     @Override
     public KakaoPayReadyResponseDTO paymentBillingById(KakaoPayReadyRequestDTO request) {
-        String billingId = request.getBillingId();
+        List<String> billingIds = resolveBillingIds(request.getBillingIds(), request.getBillingId());
+        // 여러 건을 묶어 결제해도 카카오페이 주문은 하나라서, 첫 번째 billingId를 대표 주문번호(tid 저장 키)로 사용
+        String billingId = billingIds.get(0);
 
         // PaymentServiceImpl과 동일한 패턴: billingId 자체를 null 체크하는 게 아니라
-        // "실제로 결제 가능한 건이 맞는지"를 DB 조회로 확인
-        List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(billingId);
-        if (items.isEmpty()) {
-            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        // "실제로 결제 가능한 건이 맞는지"를 DB 조회로 확인하고, 금액도 프론트 값이 아니라 DB 기준으로 합산
+        String patientId = null;
+        long totalAmount = 0L;
+        for (String id : billingIds) {
+            List<BillingDetailItemDTO> items = billingDetailRepository.findBillingDetailFull(id);
+            if (items.isEmpty()) {
+                throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+            }
+            BillingDetailItemDTO header = items.get(0);
+            if (patientId != null && !patientId.equals(header.getPatientId())) {
+                // 한 번의 카카오페이 결제에 다른 환자의 건이 섞이면 안 됨
+                throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+            }
+            patientId = header.getPatientId();
+            totalAmount += header.getTotalAmount();
         }
-        BillingDetailItemDTO header = items.get(0);
 
         // 우리 백엔드용 요청을, 카카오페이가 요구하는 형태(KakaoPayReadyApiRequestDTO)로 조립
         KakaoPayReadyApiRequestDTO apiRequest = KakaoPayReadyApiRequestDTO.builder()
                 .cid(cid)
                 .partnerOrderId(billingId)
-                .partnerUserId(header.getPatientId())
+                .partnerUserId(patientId)
                 .itemName("진료비 수납")
                 .quantity(1)
-                .totalAmount(header.getTotalAmount())
+                .totalAmount(totalAmount)
                 .taxFreeAmount(0L)
-                .approvalUrl(approvalUrl + "?billingId=" + billingId) // 콜백 페이지가 billingId를 쿼리로 읽어야 하므로 붙여서 보냄
+                // 콜백 페이지가 billingId(대표)와 billingIds(전체)를 쿼리로 읽어 approve에 그대로 보내야 하므로 붙여서 보냄
+                .approvalUrl(approvalUrl + "?billingId=" + billingId + "&billingIds=" + String.join(",", billingIds))
                 .cancelUrl(cancelUrl)
                 .failUrl(failUrl)
                 .build();
@@ -80,7 +93,7 @@ public class KakaoPayServiceImpl implements KakaoPayService {
         // 실제 카카오페이 호출
         KakaoPayReadyApiResponseDTO apiResponse = kakaoPayClient.ready(apiRequest);
 
-        // approve 때 다시 필요한 tid를 billingId 기준으로 DB에 저장해둠
+        // approve 때 다시 필요한 tid를 대표 billingId 기준으로 DB에 저장해둠
         kakaoPayReadyRepository.save(new KakaoPayReadyEntity(billingId, apiResponse.getTid(), LocalDateTime.now()));
 
         // 프론트가 기대하는 응답 모양으로 변환해서 리턴
@@ -92,7 +105,8 @@ public class KakaoPayServiceImpl implements KakaoPayService {
 
     @Override
     public void approve(KakaoPayApproveRequestDTO request) {
-        String billingId = request.getBillingId();
+        List<String> billingIds = resolveBillingIds(request.getBillingIds(), request.getBillingId());
+        String billingId = billingIds.get(0); // ready 때 tid를 저장한 대표 billingId
 
         // find + delete로 꺼냄. 비관적 락(findByIdForUpdate)으로 조회하므로, approve가 거의
         // 동시에 두 번 들어와도(예: 콜백 페이지 새로고침) 두 번째 요청은 첫 번째 트랜잭션이
@@ -124,7 +138,18 @@ public class KakaoPayServiceImpl implements KakaoPayService {
         kakaoPayClient.approve(apiRequest);
 
         // 카카오페이 승인 확인 끝났으니, 그 다음은 CASH/CARD와 완전히 동일한 마무리 로직 재사용
-        paymentService.processPayment(new PaymentRequestDTO(billingId, "KAKAO_PAY"));
+        paymentService.processPayment(new PaymentRequestDTO(billingIds, "KAKAO_PAY"));
+    }
+
+    // billingIds가 오면 그 목록 전체, 아니면 기존처럼 billingId 한 건
+    private List<String> resolveBillingIds(List<String> billingIds, String billingId) {
+        if (billingIds != null && !billingIds.isEmpty()) {
+            return billingIds;
+        }
+        if (billingId == null) {
+            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        }
+        return List.of(billingId);
     }
 
     // TODO: 카카오페이 결제취소 API 호출 로직 구현 예정 (지금은 컴파일용 기본 검증만)

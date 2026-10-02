@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -99,6 +100,7 @@ public class BillingDetailServiceImpl implements BillingDetailService {
                 .receptionId(header.getReceptionId())
                 .admissionId(header.getAdmissionId())
                 .billingStatus(header.getBillingStatus())
+                .billingIds(List.of(header.getBillingId()))
                 .totalAmount(header.getTotalAmount())
                 .outpatientAmount(header.getReceptionId() != null ? header.getTotalAmount() : 0L)
                 .inpatientAmount(header.getAdmissionId() != null ? header.getTotalAmount() : 0L)
@@ -113,6 +115,54 @@ public class BillingDetailServiceImpl implements BillingDetailService {
     }
     //메인 페이지에 불러와야할 데이터들. 환자 한명의 진료비 상세 조회
     //외래비 + 입원비 = 총합
+
+    /**
+     * 환자 선택 후 patientId 기준으로 미수납(READY) 건 전부를 합쳐서 조회 - 한 번에 수납하기 위한 화면용
+     */
+    @Override
+    public BillingDetailResponseDTO getPatientBillingDetails(String patientId) {
+
+        List<BillingDetailItemDTO> items = billingDetailRepository.findPatientBillingDetailFull(patientId);
+
+        if (items.isEmpty()) {
+            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        }
+
+        PatientDTO patient = patientBusinessDelegate.getPatientById(patientId);
+
+        if (patient == null) {
+            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
+        }
+
+        // totalAmount는 billing별 합계가 매 행에 반복돼 있으므로 billing별 첫 행만 모아서 더함
+        Map<String, BillingDetailItemDTO> headerByBillingId = items.stream()
+                .collect(Collectors.toMap(BillingDetailItemDTO::getBillingId, Function.identity(),
+                        (first, ignored) -> first, LinkedHashMap::new));
+
+        long outpatientAmount = headerByBillingId.values().stream()
+                .filter(header -> header.getReceptionId() != null)
+                .mapToLong(BillingDetailItemDTO::getTotalAmount)
+                .sum();
+        long inpatientAmount = headerByBillingId.values().stream()
+                .filter(header -> header.getAdmissionId() != null)
+                .mapToLong(BillingDetailItemDTO::getTotalAmount)
+                .sum();
+
+        return BillingDetailResponseDTO.builder()
+                .billingStatus("READY")
+                .billingIds(List.copyOf(headerByBillingId.keySet()))
+                .totalAmount(outpatientAmount + inpatientAmount)
+                .outpatientAmount(outpatientAmount)
+                .inpatientAmount(inpatientAmount)
+                .patientId(patient.getPatientId())
+                .patientName(patient.getPatientName())
+                .phoneNo(patient.getPhoneNo())
+                .address(patient.getAddress())
+                .addressDetail(patient.getAddressDetail())
+                .birthDate(patient.getBirthDate())
+                .items(items)
+                .build();
+    }
 
    
 

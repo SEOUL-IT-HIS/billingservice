@@ -34,10 +34,26 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    // 여러 건을 한 번에 결제해도 payment 행은 billing마다 하나씩 남긴다 (수납이력/취소가 billingId 단위라서).
+    // 클래스 전체가 @Transactional이라 중간에 한 건이라도 실패하면 전부 롤백됨.
     @Override
     public void processPayment(PaymentRequestDTO request) {
+        List<String> billingIds = request.getBillingIds() != null && !request.getBillingIds().isEmpty()
+                ? request.getBillingIds()
+                : (request.getBillingId() != null ? List.of(request.getBillingId()) : List.of());
+
+        if (billingIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
+        }
+
+        for (String billingId : billingIds) {
+            payBilling(billingId, request.getPaymentMethodCode());
+        }
+    }
+
+    private void payBilling(String billingId, String paymentMethodCode) {
         List<BillingDetailItemDTO> items =
-                billingDetailRepository.findBillingDetailFull(request.getBillingId());
+                billingDetailRepository.findBillingDetailFull(billingId);
 
         if (items.isEmpty()) {
             throw new BusinessException(ErrorCode.BILLING_NOT_FOUND);
@@ -57,7 +73,7 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentEntity payment = PaymentEntity.builder()
                     .paymentId(UUID.randomUUID().toString())
                     .billingId(header.getBillingId())
-                    .paymentMethodCode(request.getPaymentMethodCode())
+                    .paymentMethodCode(paymentMethodCode)
                     .paymentAmount(header.getTotalAmount())
                     .paymentStatus("APPROVED")
                     .paymentAt(now)

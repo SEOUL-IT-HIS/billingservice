@@ -22,6 +22,9 @@ public interface BillingDetailRepository {
     // billing_detail 행 개수만큼 여러 행이 나오고, 헤더 값(합계 등)은 윈도우 함수로 매 행에 동일하게 반복됨.
     List<BillingDetailItemDTO> findBillingDetailFull(@Param("billingId") String billingId);
 
+    // patientId 기준으로 그 환자의 미수납(READY) billing 전체의 상세 항목을 한 번에 조회 - 여러 건 합산 수납용
+    List<BillingDetailItemDTO> findPatientBillingDetailFull(@Param("patientId") String patientId);
+
     // 상태 변경 전 수납정보 존재 여부 확인
     BillingStatusDTO selectBillingDetailForStatusUpdate(@Param("billingId") String billingId);
 

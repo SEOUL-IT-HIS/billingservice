@@ -102,9 +102,55 @@
 
 </select>
 
+    <!-- ========================================================= -->
+    <!-- 2-1. patientId 기준 진료비 상세조회 (미수납 건 전체 합산용) -->
+    <!-- 2번과 같은 구조인데 한 환자의 READY billing 전부를 가져옴.  -->
+    <!-- totalAmount는 billing별 합계(PARTITION BY billing_id)라서  -->
+    <!-- 서비스에서 billing별 첫 행만 모아 외래/입원/총합을 계산함.  -->
+    <!-- ========================================================= -->
+
+    <select id="findPatientBillingDetailFull"
+        parameterType="string"
+        resultType="kr.co.seoulit.his.billingservice.billing.dto.BillingDetailItemDTO">
+
+    SELECT
+        b.billing_id                 AS billingId,
+        b.patient_id                 AS patientId,
+        b.reception_id               AS receptionId,
+        b.admission_id               AS admissionId,
+        b.billing_status             AS billingStatus,
+
+        bd.quantity                  AS quantity,
+        bd.unit_price                AS unitPrice,
+        bd.amount                    AS amount,
+        bd.detail_status             AS detailStatus,
+        bd.occurred_at               AS occurredAt,
+        bd.billing_type              AS billingType,
+
+        bm.fee_code                  AS feeCode,
+        bm.fee_name                  AS itemName,
+
+        NVL(SUM(bd.amount) OVER (PARTITION BY b.billing_id), 0)   AS totalAmount
+
+    FROM billing b
+
+             JOIN billing_detail bd
+                  ON b.billing_id = bd.billing_id
+
+             JOIN billing_master bm
+                  ON bd.billing_master_id = bm.billing_master_id
+
+    WHERE b.patient_id = #{patientId}
+      AND b.billing_status = 'READY'
+      AND bd.detail_status = 'READY'
+
+    ORDER BY bd.occurred_at ASC
+
+</select>
+
 
     <!-- ========================================================= -->
-    <!-- 3. 결제 전 수납정보 존재 및 READY 상태 확인 (billingId 기준) -->
+    <!-- 3.결제 전 수납정보 존재 및 READY 상태 확인 (billingId 기준) -->
     <!-- ========================================================= -->
 
     <select id="selectBillingDetailForStatusUpdate"
