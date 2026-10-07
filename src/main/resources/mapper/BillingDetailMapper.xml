@@ -244,6 +244,18 @@
     </select>
     <!--    프로시저 과제 테스트-->
 
+    <!-- 수가코드 + 수량(입원일수)으로 단가/금액 계산 - 프로시저 calc_charge_amount (db/calc_charge_amount.sql) -->
+    <select id="calcChargeAmount"
+            statementType="CALLABLE"
+            parameterType="map">
+        {call calc_charge_amount(
+              #{fee_code,   mode=IN,  jdbcType=VARCHAR},
+              #{quantity,   mode=IN,  jdbcType=NUMERIC},
+              #{unit_price, mode=OUT, jdbcType=NUMERIC},
+              #{amount,     mode=OUT, jdbcType=NUMERIC}
+              )}
+    </select>
+
 
 
 </mapper>
