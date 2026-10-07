@@ -129,4 +129,31 @@ public class BillingMasterServiceImpl implements BillingMasterService {
         return billingMasterMapper.toDto(savedEntity);
     }
 
+    // 수정 - 수가명/기본단가/적용기간/사용여부만 변경
+    @Override
+    public BillingMasterDTO updateBillingMaster(String billingMasterId, BillingMasterDTO billingMasterDTO) {
+        BillingMasterEntity entity = billingMasterRepository.findById(billingMasterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BILLING_MASTER_NOT_BILLINGID));
+
+        if (billingMasterDTO.getFeeName() == null || billingMasterDTO.getFeeName().isBlank()) {
+            throw new BusinessException(ErrorCode.BILLING_FEE_NAME_NOT_FOUND);
+        }
+        if (billingMasterDTO.getDefaultPrice() == null
+                || new BigDecimal(billingMasterDTO.getDefaultPrice()).signum() < 0) {
+            throw new BusinessException(ErrorCode.BILLING_DEFAULT_PRICE_INVALID);
+        }
+        if (billingMasterDTO.getEffectiveFrom() == null) {
+            throw new BusinessException(ErrorCode.BILLING_EFFECTIVE_FORM_NOT_FOUND);
+        }
+        if (billingMasterDTO.getEffectiveTo() == null) {
+            throw new BusinessException(ErrorCode.BILLING_EFFECTIVE_TO_NOT_FOUND);
+        }
+        if (!"Y".equals(billingMasterDTO.getUseYn()) && !"N".equals(billingMasterDTO.getUseYn())) {
+            billingMasterDTO.setUseYn(entity.getUseYn()); // 값이 없거나 이상하면 기존 값 유지
+        }
+
+        billingMasterMapper.applyUpdate(entity, billingMasterDTO);
+        return billingMasterMapper.toDto(billingMasterRepository.saveAndFlush(entity));
+    }
+
 }
