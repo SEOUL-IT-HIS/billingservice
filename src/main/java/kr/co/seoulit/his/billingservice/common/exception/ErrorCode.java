@@ -38,6 +38,8 @@ public enum ErrorCode {
     // 이미 처리되었거나 수납 가능한 상태가 아닙니다.
     BILLING_RECEPTION_OR_ADMISSION_ID_REQUIRED(HttpStatus.BAD_REQUEST, "Either reception ID or admission ID is required."),
     // 접수 ID 또는 입원 ID 중 하나는 필수입니다.
+    BILLING_CHARGE_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "Quantity (admission days) must be greater than 0."),
+    // 수량(입원일수)은 0보다 커야 합니다.
     PAYMENT_RECEIPT_NO_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate receipt number. Please try again."),
     // 영수증번호 채번에 실패했습니다. 다시 시도해주세요.
 

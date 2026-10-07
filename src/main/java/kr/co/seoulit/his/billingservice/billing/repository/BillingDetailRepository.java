@@ -37,4 +37,8 @@ public interface BillingDetailRepository {
     // 프로시저 과제 - 수납준비환자가 몇명인지 추출
     void countReadyBilling(Map<String, Object> params);
 
+    // 수가코드 + 수량(입원일수)으로 단가/금액을 프로시저(calc_charge_amount)로 계산
+    // 입력: fee_code, quantity / 결과(OUT): unit_price, amount 가 params에 채워진다
+    void calcChargeAmount(Map<String, Object> params);
+
 }

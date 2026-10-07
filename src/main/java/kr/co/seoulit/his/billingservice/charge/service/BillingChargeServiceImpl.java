@@ -13,11 +13,14 @@ import kr.co.seoulit.his.billingservice.master.repository.CommonCodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -63,10 +66,26 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         BillingMasterEntity billingMaster = billingMasterRepository.findByFeeCode(billingChargeRequestDTO.getFeeCode())
                 .orElseThrow(() -> new BusinessException(ErrorCode.BILLING_FEE_CODE_NOT_FOUND));
 
-        // amount는 호출자가 보낸 값을 믿지 않고 unitPrice(수가 단가) × quantity로 직접 계산한다.
-        // (호출자가 amount를 0으로 보내거나 아예 안 보내는 경우가 있어서 그대로 믿으면 안 됨)
-        BigDecimal quantity = new BigDecimal(billingChargeRequestDTO.getQuantity());
-        BigDecimal amount = billingMaster.getDefaultPrice().multiply(quantity);
+        // amount는 호출자가 보낸 값을 믿지 않고 DB 프로시저(calc_charge_amount)로 계산한다: 기본단가 × quantity(입원일수).
+        // (병동은 수가코드와 입원일수만 보내고, 호출자가 amount를 0으로 보내거나 안 보내는 경우도 있어서 그대로 믿으면 안 됨)
+        Map<String, Object> calcParams = new HashMap<>();
+        calcParams.put("fee_code", billingChargeRequestDTO.getFeeCode());
+        calcParams.put("quantity", new BigDecimal(billingChargeRequestDTO.getQuantity()));
+        try {
+            billingDetailRepository.calcChargeAmount(calcParams);
+        } catch (DataAccessException e) {
+            // 프로시저의 RAISE_APPLICATION_ERROR 번호로 원인 구분 (-20001: 수가코드 없음, -20002: 수량 0 이하)
+            String message = String.valueOf(e.getMostSpecificCause().getMessage());
+            if (message.contains("ORA-20001")) {
+                throw new BusinessException(ErrorCode.BILLING_FEE_CODE_NOT_FOUND);
+            }
+            if (message.contains("ORA-20002")) {
+                throw new BusinessException(ErrorCode.BILLING_CHARGE_QUANTITY_INVALID);
+            }
+            throw e;
+        }
+        BigDecimal unitPrice = (BigDecimal) calcParams.get("unit_price");
+        BigDecimal amount = (BigDecimal) calcParams.get("amount");
 
         // 보험/본인부담금 분리 - 실제 급여기준표 반영 전 임시 규칙:
         // 비급여(NON_INS)는 전액 본인부담, 급여(그 외)는 본인부담 30% / 보험부담 70%로 고정 계산
@@ -90,7 +109,7 @@ public class BillingChargeServiceImpl implements BillingChargeService {
                 .sourceRecordId(billingChargeRequestDTO.getSourceRecordId())
                 .feeCode(billingChargeRequestDTO.getFeeCode())
                 .itemName(billingChargeRequestDTO.getItemName())
-                .unitPrice(billingMaster.getDefaultPrice().toString())
+                .unitPrice(unitPrice.toString())
                 .quantity(billingChargeRequestDTO.getQuantity())
                 .amount(amount.toString())
                 .billingMasterId(billingMaster.getBillingMasterId())
