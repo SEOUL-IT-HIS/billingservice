@@ -54,6 +54,15 @@ public class BillingMasterMapper {
                 .build();
     }
 
+    // 수정 가능한 항목(수가명/기본단가/적용기간/사용여부)만 기존 엔티티에 반영. 코드/분류/보험유형은 바꾸지 않음.
+    public void applyUpdate(BillingMasterEntity entity, BillingMasterDTO dto) {
+        entity.setFeeName(dto.getFeeName());
+        entity.setDefaultPrice(new BigDecimal(dto.getDefaultPrice()));
+        entity.setEffectiveFrom(parseDateTime(dto.getEffectiveFrom()));
+        entity.setEffectiveTo(parseDateTime(dto.getEffectiveTo()));
+        entity.setUseYn(dto.getUseYn());
+    }
+
     // "yyyy-MM-dd" (날짜만) 와 "yyyy-MM-dd'T'HH:mm:ss" (전체 일시) 형식을 모두 지원.
     private LocalDateTime parseDateTime(String value) {
         try {

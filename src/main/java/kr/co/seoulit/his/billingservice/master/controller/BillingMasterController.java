@@ -50,6 +50,17 @@ public class BillingMasterController{
             )
     );
 }
-
+        //수납 기준정보 수정 - 수가명/기본단가/적용기간/사용여부만 변경
+        @PutMapping("/{billingMasterId}")
+        public ResponseEntity<ApiResponse<BillingMasterDTO>> updateBillingMaster(
+                            @PathVariable String billingMasterId,
+                            @RequestBody BillingMasterDTO billingMasterDTO) {
+            return ResponseEntity.ok(
+                ApiResponse.success(
+                    SuccessCode.OK.getMessage(),
+                    billingMasterService.updateBillingMaster(billingMasterId, billingMasterDTO)
+                )
+            );
+        }
 
 }
