@@ -105,17 +105,18 @@ public class PaymentServiceImpl implements PaymentService {
         return prefix + "-" + String.format("%05d", sequence);
     }
 
-    @Override
-    public PayCancelIdDTO paymentCancel(PayCancelIdDTO request) {
-        String patientId = request.getPatientId();
-
-        if (patientId == null) {
-            throw new BusinessException(
-                    ErrorCode.PATIENT_NOT_FOUND);
-        }
-
-        return request;
-    }
+    // TODO: 수납취소(현금/카드) 미구현 - BillingDetailController의 cancel API와 함께 주석처리
+//    @Override
+//    public PayCancelIdDTO paymentCancel(PayCancelIdDTO request) {
+//        String patientId = request.getPatientId();
+//
+//        if (patientId == null) {
+//            throw new BusinessException(
+//                    ErrorCode.PATIENT_NOT_FOUND);
+//        }
+//
+//        return request;
+//    }
     // 결제 취소 처리 (카드, 현금 등 결제 수단에 따라 실제 취소 로직은 다를 수 있음)
 
 }

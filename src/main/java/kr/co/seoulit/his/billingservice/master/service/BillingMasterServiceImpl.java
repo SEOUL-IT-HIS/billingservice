@@ -5,7 +5,7 @@ import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.master.entity.BillingMasterEntity;
 import kr.co.seoulit.his.billingservice.master.mapper.BillingMasterMapper;
 import kr.co.seoulit.his.billingservice.master.repository.BillingMasterRepository;
-import kr.co.seoulit.his.billingservice.master.repository.CommonCodeRepository;
+import kr.co.seoulit.his.billingservice.businessdelegate.admin.AdminBusinessDelegate;
 import kr.co.seoulit.his.billingservice.master.dto.BillingMasterDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,7 +22,7 @@ public class BillingMasterServiceImpl implements BillingMasterService {
 
     private final BillingMasterRepository billingMasterRepository;
     private final BillingMasterMapper billingMasterMapper;
-    private final CommonCodeRepository commonCodeRepository;
+    private final AdminBusinessDelegate adminBusinessDelegate; // 공통코드 검증은 admin API로 (타 서비스 DB 직접 접근 금지)
 
     // 공통코드 "서비스구분" 그룹(외래시스템/응급시스템/병동시스템/검사시스템/수술시스템) - admin.common_code.group_id
     @Value("${billing.master.source-service-code.group-id}")
@@ -37,10 +37,10 @@ public class BillingMasterServiceImpl implements BillingMasterService {
     private String insuranceTypeCodeGroupId;
 
     public BillingMasterServiceImpl(BillingMasterRepository billingMasterRepository, BillingMasterMapper billingMasterMapper,
-                                     CommonCodeRepository commonCodeRepository) {
+                                     AdminBusinessDelegate adminBusinessDelegate) {
         this.billingMasterRepository = billingMasterRepository;
         this.billingMasterMapper = billingMasterMapper;
-        this.commonCodeRepository = commonCodeRepository;
+        this.adminBusinessDelegate = adminBusinessDelegate;
     }
 
     // 전체조회할때 use_yn="Y" 인것만 조회해서 불러옴.
@@ -67,8 +67,8 @@ public class BillingMasterServiceImpl implements BillingMasterService {
             throw new BusinessException(ErrorCode.BILLING_SOURCE_SERVICE_CODE_NOT_FOUND);
         }
         // FK(admin.common_code)를 타기 전에 미리 검증 - 위반 시 원시 DB 예외 대신 명확한 에러를 준다
-        if (!commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
-                billingMasterDTO.getSourceServiceCode(), sourceServiceCodeGroupId, "Y")) {
+        if (!adminBusinessDelegate.isActiveCode(
+                billingMasterDTO.getSourceServiceCode(), sourceServiceCodeGroupId)) {
             throw new BusinessException(ErrorCode.BILLING_SOURCE_SERVICE_CODE_NOT_FOUND);
         }
         //서비스 구분 코드
@@ -88,16 +88,16 @@ public class BillingMasterServiceImpl implements BillingMasterService {
         if (billingMasterDTO.getCategoryCode() == null || billingMasterDTO.getCategoryCode().isBlank()) {
             throw new BusinessException(ErrorCode.BILLING_CATEGORY_CODE_NOT_FOUND);
         }
-        if (!commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
-                billingMasterDTO.getCategoryCode(), categoryCodeGroupId, "Y")) {
+        if (!adminBusinessDelegate.isActiveCode(
+                billingMasterDTO.getCategoryCode(), categoryCodeGroupId)) {
             throw new BusinessException(ErrorCode.BILLING_CATEGORY_CODE_NOT_FOUND);
         }
         //분류 코드
         if (billingMasterDTO.getInsuranceTypeCode() == null || billingMasterDTO.getInsuranceTypeCode().isBlank()) {
             throw new BusinessException(ErrorCode.BILLING_INSURANCE_TYPE_CODE_NOT_FOUND);
         }
-        if (!commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
-                billingMasterDTO.getInsuranceTypeCode(), insuranceTypeCodeGroupId, "Y")) {
+        if (!adminBusinessDelegate.isActiveCode(
+                billingMasterDTO.getInsuranceTypeCode(), insuranceTypeCodeGroupId)) {
             throw new BusinessException(ErrorCode.BILLING_INSURANCE_TYPE_CODE_NOT_FOUND);
         }
         //급여 비급여 코드

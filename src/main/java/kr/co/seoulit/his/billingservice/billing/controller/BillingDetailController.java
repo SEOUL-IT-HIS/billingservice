@@ -84,17 +84,20 @@ public class BillingDetailController {
         );
     }
     //결제 화면 - 팝업. 누르면 billing_status,payment_status 를 ready->success
-    @PatchMapping("/cancel/{patientId}")
-    public ResponseEntity<ApiResponse<PayCancelIdDTO>> paymentCancel(
-            @RequestParam PayCancelIdDTO request
-    ){
-        paymentService.paymentCancel(request);
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        null
-                )
-        );
-    }
+    // TODO: 수납취소(현금/카드) 미구현이라 API 노출하지 않도록 주석처리. 구현 시 아래 사항 반영 필요
+    //  - 경로의 {patientId}를 @PathVariable로 받고, 취소 대상 식별을 위해 paymentId를 body로 받을 것
+    //  - PaymentRepository.cancelPayment + billing 상태 되돌리기 + 입원 건 settlement 처리 정책
+//    @PatchMapping("/cancel/{patientId}")
+//    public ResponseEntity<ApiResponse<PayCancelIdDTO>> paymentCancel(
+//            @RequestParam PayCancelIdDTO request
+//    ){
+//        paymentService.paymentCancel(request);
+//        return ResponseEntity.ok(
+//                ApiResponse.success(
+//                        null
+//                )
+//        );
+//    }
     //이미 수납된 건을 취소하면서 success에서 cancle로 변경 (현금,카드 만 해당- 카카오페이는 카카오페이 컨트롤러 영역)
 
 

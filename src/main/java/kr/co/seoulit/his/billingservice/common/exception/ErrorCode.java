@@ -37,6 +37,7 @@ public enum ErrorCode {
     BILLING_ALREADY_PROCESSED(HttpStatus.CONFLICT, "Already processed or not in a payable state."),
     // 이미 처리되었거나 수납 가능한 상태가 아닙니다.
     BILLING_RECEPTION_OR_ADMISSION_ID_REQUIRED(HttpStatus.BAD_REQUEST, "Either reception ID or admission ID is required."),
+
     // 접수 ID 또는 입원 ID 중 하나는 필수입니다.
     BILLING_CHARGE_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "Quantity (admission days) must be greater than 0."),
     // 수량(입원일수)은 0보다 커야 합니다.
@@ -52,6 +53,8 @@ public enum ErrorCode {
     // 환자 정보를 찾을 수 없습니다.
     PATIENT_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Unable to communicate with the patient service. Please try again later."),
     // 환자 서비스와 통신할 수 없습니다. 잠시 후 다시 시도해주세요.
+    ADMIN_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Unable to communicate with the admin service. Please try again later."),
+    // 관리자 서비스(공통코드)와 통신할 수 없습니다. 잠시 후 다시 시도해주세요.
 
     BILLING_DATE_FORMAT_INVALID(HttpStatus.BAD_REQUEST, "Invalid date format. (e.g., yyyy-MM-dd or yyyy-MM-dd'T'HH:mm:ss)"),
     // 날짜 형식이 올바르지 않습니다. (예: yyyy-MM-dd 또는 yyyy-MM-dd'T'HH:mm:ss)

@@ -9,7 +9,7 @@ import kr.co.seoulit.his.billingservice.common.exception.BusinessException;
 import kr.co.seoulit.his.billingservice.common.exception.ErrorCode;
 import kr.co.seoulit.his.billingservice.master.entity.BillingMasterEntity;
 import kr.co.seoulit.his.billingservice.master.repository.BillingMasterRepository;
-import kr.co.seoulit.his.billingservice.master.repository.CommonCodeRepository;
+import kr.co.seoulit.his.billingservice.businessdelegate.admin.AdminBusinessDelegate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +32,7 @@ public class BillingChargeServiceImpl implements BillingChargeService {
     private final BillingMasterRepository billingMasterRepository;// 수납기준정보(billing_master) 조회용
     private final BillingDetailRepository billingDetailRepository;// 수납상세정보(billing_detail) insert용
     private final BillingRepository billingRepository;            // 수납헤더정보(billing) 조회/insert/update용
-    private final CommonCodeRepository commonCodeRepository;      // ADMIN.COMMON_CODE 조회 전용
+    private final AdminBusinessDelegate adminBusinessDelegate;    // 공통코드 검증은 admin API로 (타 서비스 DB 직접 접근 금지)
 
     // 공통코드 "서비스구분" 그룹(외래시스템/응급시스템/병동시스템/검사시스템/수술시스템) - admin.common_code.group_id
     @Value("${billing.master.source-service-code.group-id}")
@@ -56,8 +56,8 @@ public class BillingChargeServiceImpl implements BillingChargeService {
         // 타 서비스가 보낸 sourceServiceCode가 실제로 admin의 공통코드("서비스구분" 그룹)에 등록된 값인지 검증
         if (billingChargeRequestDTO.getSourceServiceCode() == null// sourceServiceCode가 null이거나 공백이거나, 공통코드에 존재하지 않으면 오류
                 || billingChargeRequestDTO.getSourceServiceCode().isBlank()
-                || !commonCodeRepository.existsByCodeIdAndGroupIdAndUseYn(
-                        billingChargeRequestDTO.getSourceServiceCode(), sourceServiceCodeGroupId, "Y")) {
+                || !adminBusinessDelegate.isActiveCode(
+                        billingChargeRequestDTO.getSourceServiceCode(), sourceServiceCodeGroupId)) {
                             // sourceServiceCode가 공통코드에 존재하지 않으면 오류
             throw new BusinessException(ErrorCode.BILLING_SOURCE_SERVICE_CODE_NOT_FOUND);
         }

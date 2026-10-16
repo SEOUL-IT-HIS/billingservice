@@ -41,13 +41,16 @@ public class KakaoPayController {
         );
     }
 
-    @PatchMapping("/cancel")
-    public ResponseEntity<ApiResponse<KakaoPayCancelIdDTO>> cancel(
-            @RequestBody KakaoPayCancelIdDTO request
-    ){
-        kakaoPayService.cancel(request);
-        return ResponseEntity.ok(
-                ApiResponse.success(SuccessCode.OK.getMessage(), null)
-        );
-    }
+    // TODO: 카카오페이 결제취소 미구현이라 API 노출하지 않도록 주석처리. 구현 시 아래 사항 반영 필요
+    //  - approve 때 tid를 PAYMENT.APPROVAL_NO에 저장 (지금은 approve 후 tid가 삭제돼 취소에 쓸 수 없음)
+    //  - KakaoPayClient.cancel() 추가, 요청 DTO에 paymentId 추가
+//    @PatchMapping("/cancel")
+//    public ResponseEntity<ApiResponse<KakaoPayCancelIdDTO>> cancel(
+//            @RequestBody KakaoPayCancelIdDTO request
+//    ){
+//        kakaoPayService.cancel(request);
+//        return ResponseEntity.ok(
+//                ApiResponse.success(SuccessCode.OK.getMessage(), null)
+//        );
+//    }
 }

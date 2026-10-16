@@ -7,6 +7,7 @@ public interface PaymentService {
 
     void processPayment(PaymentRequestDTO request);
 
-    PayCancelIdDTO paymentCancel(PayCancelIdDTO request);
+    // TODO: 수납취소(현금/카드) 미구현이라 주석처리
+//    PayCancelIdDTO paymentCancel(PayCancelIdDTO request);
 
 }

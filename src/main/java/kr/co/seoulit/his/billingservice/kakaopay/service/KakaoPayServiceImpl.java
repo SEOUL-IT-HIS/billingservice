@@ -152,14 +152,14 @@ public class KakaoPayServiceImpl implements KakaoPayService {
         return List.of(billingId);
     }
 
-    // TODO: 카카오페이 결제취소 API 호출 로직 구현 예정 (지금은 컴파일용 기본 검증만)
-    @Override
-    public KakaoPayCancelIdDTO cancel(KakaoPayCancelIdDTO request) {
-        if (request.getPatientId() == null) {
-            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
-        }
-
-        return request;
-    }
+    // TODO: 카카오페이 결제취소 API 호출 로직 구현 예정 - 미구현이라 KakaoPayController의 cancel API와 함께 주석처리
+//    @Override
+//    public KakaoPayCancelIdDTO cancel(KakaoPayCancelIdDTO request) {
+//        if (request.getPatientId() == null) {
+//            throw new BusinessException(ErrorCode.PATIENT_NOT_FOUND);
+//        }
+//
+//        return request;
+//    }
 
 }
