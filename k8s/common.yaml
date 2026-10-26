@@ -1,111 +1,101 @@
-# [공통] 공통 설정 + 인프라(Redis, Kafka, SeaweedFS) — 이 파일 하나에 모두 들어 있다 (`---` 로 구분). 공통 담당 1명이 적용한다.
-#
-# 들어 있는 것 (위에서 아래 순서로 등록된다)
-#   ConfigMap his-common-config  /  Redis (Deployment+Service)  /  Kafka (Deployment+Service)
-#   /  SeaweedFS (PVC+Deployment+Service)
-#
-# 적용 순서 (서버에서, 이 순서대로):
-#   1) kubectl create namespace his                       <- 작업 공간. 한 번만. (이미 있으면 AlreadyExists 는 무시)
-#   2) read -rsp "Redis 비밀번호: " P; echo        <- guest4 는 셸 기록을 모두가 같이 보므로 비밀번호를 직접 치지 않는다
-#      kubectl -n his create secret generic redis-secret --from-literal=REDIS_PASSWORD="$P"; unset P
-#   3) kubectl apply -f common.yaml
-#
-# !! 주의 !!
-#   kubectl delete -f common.yaml 을 하지 않는다. 이 파일에는 SeaweedFS 의 PersistentVolumeClaim(seaweedfs-data)이 들어 있어서
-#   지우면 저장된 파일(영상·직원 사진)이 같이 사라지고, Redis·Kafka 도 내려가 모든 서비스가 영향을 받는다.
-#   일부만 내려야 하면:  kubectl -n his delete deployment <이름>   처럼 대상을 직접 지정한다.
-#   프론트는 따로 관리한다(30-hisfrontend.yaml). 이미지와 외부 포트를 별도로 자주 바꾸기 때문이다.
-
-# [공통] 모든 백엔드가 같이 쓰는 설정값 (ConfigMap).
-# 각 담당자는 자기 Deployment 에서 이 ConfigMap 을 envFrom 으로 가져다 쓴다.
-# 이렇게 한 곳에 모아 두면 "Redis 주소가 바뀌었다" 같은 일이 생겨도 이 파일만 고치면 된다.
-#
-# 키 이름 규칙(Spring Boot 환경변수): 점(.)과 하이픈(-)을 밑줄(_)로, 모두 대문자
-#   spring.data.redis.host        ->  SPRING_DATA_REDIS_HOST
-#   app.admin-service.base-url    ->  APP_ADMIN_SERVICE_BASE_URL
-# 환경변수는 jar 안의 application.properties 값보다 우선한다(= jar 를 다시 안 만들어도 된다).
-#
-# 주의: 서비스마다 properties 의 키 이름이 다를 수 있다. 자기 서비스에 같은 키가 있는지 확인하고,
-#       없는 키는 무시되므로(에러 없이) 자기 서비스 ConfigMap 에 맞는 이름으로 따로 적는다.
-apiVersion: v1
-kind: ConfigMap
+apiVersion: v1                          # 사용할 쿠버네티스 API 버전
+kind: ConfigMap                        # 설정값을 보관하는 객체 (비밀값 아닌 일반 설정)
 metadata:
-  name: his-common-config
-  namespace: his
-data:
+  name: his-common-config              # 이 ConfigMap의 이름 - 각 서비스 Deployment가 envFrom으로 이 이름을 참조
+  namespace: his                       # 이 객체가 속하는 작업 구역 - 전 서비스가 같은 namespace라 이름만으로 서로 찾음
+data:                                  # 컨테이너에 전달할 설정값 (키=환경변수 이름, 값=문자열)
   # --- 시간대·인코딩·JVM 메모리 (컨테이너 기본은 UTC -> DB 시각이 9시간 어긋나는 것 방지) ---
-  TZ: "Asia/Seoul"
+  TZ: "Asia/Seoul"                     # 컨테이너 OS 자체의 시간대. 없으면 OS가 UTC로 돌아서 로그/파일시각이 실제보다 9시간 느리게 찍힘
   JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul -Dfile.encoding=UTF-8 -XX:MaxRAMPercentage=70"
+  # JVM이 기동할 때 스스로 읽어가는 특수 환경변수(이름 고정, Spring 프로퍼티 아님) - 코드/Dockerfile 수정 없이 JVM 옵션 주입
+  #   -Duser.timezone      : JVM 안에서의 시간대 (TZ는 OS용, 이건 JVM용 - 한국어 로케일 날짜 계산에 영향)
+  #   -Dfile.encoding      : 파일/문자열 인코딩 기본값을 UTF-8로 고정 (한글 깨짐 방지)
+  #   -XX:MaxRAMPercentage : 컨테이너에 할당된 메모리 중 JVM 힙으로 쓸 비율(70%) - 컨테이너 메모리 limit 기준으로 자동 계산됨
 
   # --- 클러스터 안의 공용 구성요소: Service 이름이 곧 주소 ---
   SPRING_DATA_REDIS_HOST: "redis"
+  # spring.data.redis.host 로 바인딩됨. Spring Session(Redis 세션 저장)과 RedisConnectionFactory가 이 값으로 접속.
+  # "redis" 는 IP가 아니라 아래쪽 Redis Service 의 name - 클러스터 내부 DNS가 이 이름을 Pod IP로 자동 변환해준다.
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  # spring.kafka.bootstrap-servers 로 바인딩됨. billing 기준 KafkaConsumerConfig.java의 ConsumerFactory가
+  # 이 주소로 브로커에 접속해서 exam-billing-charge/inpatient-billing-charge 토픽을 구독한다.
   APP_ADMIN_SERVICE_BASE_URL: "http://admin:9191"     # admin 포트는 9191 로 고정 (2026-10-13). Service port/targetPort/containerPort 모두 9191
+  # !! billing 기준 미스매치 주의 !! 이 키는 app.admin-service.base-url 로 바인딩되는데, 실제 코드
+  # (AdminBusinessDelegate.java)가 읽는 프로퍼티는 admin.service.base-url (앞에 app. 없음) 이라
+  # 이 값은 billing에 전달이 안 되고 무시된다. billing은 jar 기본값(localhost:9191, 같은 Pod 자기 자신을
+  # 가리킴)으로 떨어져서 공통코드 조회가 전부 연결 실패로 터진다.
+  # -> billing-config.yaml 쪽에 ADMIN_SERVICE_BASE_URL: "http://admin:9191" 을 따로 추가해야 실제로 먹는다.
 
   # --- DB (클러스터 밖의 Oracle) --- 검사영상·약제 모두 같은 주소 확인됨(2026-10-13)
   SPRING_DATASOURCE_URL: "jdbc:oracle:thin:@seoulit.pe.kr:1521/freepdb1"
+  # spring.datasource.url 로 바인딩됨. HikariCP(커넥션 풀)이 이 주소로 Oracle에 접속.
+  # Redis/Kafka와 달리 Service 이름이 아니라 실제 도메인 - DB는 클러스터 밖(공유 서버)에 있어서 K8s DNS 대상이 아님.
   # 10개 서비스가 동시에 접속해도 ORA-12516(DB 동시 접속 한도)이 나지 않도록 풀을 작게
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+  # spring.datasource.hikari.maximum-pool-size 로 바인딩됨. 서비스 하나가 Oracle에 동시에 열 수 있는 연결 수의 상한.
+  # (billing 단독 jar 설정은 "3" 이었는데, 여기선 공통값 "5" - 서비스별 billing-config가 이 값을 다시 덮어쓸 수 있음)
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "1"
+  # spring.datasource.hikari.minimum-idle 로 바인딩됨. 요청이 없을 때도 미리 열어 둘 최소 연결 수(재사용 대비).
   SPRING_JPA_SHOW_SQL: "false"
+  # spring.jpa.show-sql 로 바인딩됨. true면 Hibernate가 실행하는 SQL을 콘솔 로그에 출력 - 운영에선 false로 끔(로그 양, 성능).
 ---
 # [공통-인프라] Redis — 로그인 세션 공유 (admin 이 발급, 전 서비스가 읽음)
 # 공식 이미지를 그대로 쓰므로 직접 빌드하지 않는다.
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps/v1                     # Deployment가 사용하는 API 버전
+kind: Deployment                       # Pod 실행 개수와 교체 방식을 관리하는 객체
 metadata:
-  name: redis
-  namespace: his
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate          # 단일 Pod 인프라는 '먼저 내리고 새로 띄움'이 안전하다
-  selector:
+  name: redis                          # 이 Deployment의 이름
+  namespace: his                       # 이 객체가 속하는 작업 구역
+spec:                                  # 원하는 실행 상태
+  replicas: 1                          # 평소 유지할 Pod 개수 - Redis는 단일 인스턴스라 1개만
+  strategy:                            # 배포/업데이트 방식
+    type: Recreate                     # 단일 Pod 인프라는 '먼저 내리고 새로 띄움'이 안전하다 (RollingUpdate면 한순간 두 Redis가 떠서 세션 꼬일 수 있음)
+  selector:                            # 관리 대상 지정
     matchLabels:
-      app: redis
-  template:
+      app: redis                       # 이 라벨이 붙은 Pod를 관리 대상으로 삼음
+  template:                            # Pod 생성 도면
     metadata:
       labels:
-        app: redis
+        app: redis                     # Pod에 실제로 붙는 라벨 (위 selector와 매칭되어야 함)
     spec:
-      enableServiceLinks: false
+      enableServiceLinks: false        # 환경변수 충돌방지-
       containers:
-        - name: redis
+        - name: redis                  # 컨테이너 이름
           image: redis:8.10.1-alpine   # 서버에서 실제 돌고 있는 버전 확인됨(2026-10-13, redis-server --version). Docker Hub 태그 존재 확인됨
-          args:
+          args:                        # 컨테이너 시작 시 실행할 명령의 인자들
             - redis-server
             - --requirepass
-            - $(REDIS_PASSWORD)        # 아래 env 의 값이 $(변수) 문법으로 치환된다
+            - $(REDIS_PASSWORD)        # 아래 env 의 값이 $(변수) 문법으로 치환된다 - 결과적으로 "--requirepass 실제비밀번호"가 됨
             - --appendonly             # 팀 공용 compose 와 같은 옵션. 저장 공간(볼륨)이 없으면 Pod 재시작 때 사라진다
             - "yes"
-          env:
-            - name: REDIS_PASSWORD
+          env:                         # 이 컨테이너 전용 환경변수 (common ConfigMap과 별개)
+            - name: REDIS_PASSWORD     # 위 args의 $(REDIS_PASSWORD)가 참조하는 이름
               valueFrom:
-                secretKeyRef:
-                  name: redis-secret
-                  key: REDIS_PASSWORD
+                secretKeyRef:          # 평문 값이 아니라 Secret 객체에서 값을 가져옴 (비밀번호라 ConfigMap에 안 둠)
+                  name: redis-secret   # 맨 위 적용 순서 2번에서 미리 만들어둔 Secret 이름
+                  key: REDIS_PASSWORD  # 그 Secret 안에서 꺼낼 키
           ports:
-            - containerPort: 6379
+            - containerPort: 6379     # 컨테이너가 실제로 열어두는 포트 (Redis 기본 포트) - 정보 표시용, 실제 통신 허용은 Service가 담당
           resources:
-            requests: { cpu: 50m, memory: 64Mi }
-            limits: { memory: 256Mi }
+            requests: { cpu: 50m, memory: 64Mi }   # 스케줄링 시 최소 보장받는 자원 (0.05코어, 64MiB)
+            limits: { memory: 256Mi }               # 이 이상 메모리 쓰면 컨테이너 강제 종료(OOMKilled)
           readinessProbe:
-            tcpSocket: { port: 6379 }
-            periodSeconds: 5
+            tcpSocket: { port: 6379 }  # 6379 포트에 TCP 연결이 되는지로 "요청 받을 준비 됐는지" 판단
+            periodSeconds: 5           # 5초 간격으로 검사
           # 데이터 볼륨 없음: 세션만 저장하므로 재시작하면 전원 재로그인만 하면 된다.
 ---
-apiVersion: v1
-kind: Service
+apiVersion: v1                          # Service가 사용하는 API 버전
+kind: Service                          # 요청을 Pod로 연결하는 고정 접점(Pod가 재시작돼 IP가 바뀌어도 이 이름은 안 바뀜)
 metadata:
-  name: redis               # 클러스터 안 주소: redis:6379
-  namespace: his
+  name: redis               # 클러스터 안 주소: redis:6379 - 다른 모든 서비스가 SPRING_DATA_REDIS_HOST에 바로 이 이름을 씀
+  namespace: his                       # 이 객체가 속하는 작업 구역
 spec:
-  type: ClusterIP           # 클러스터 밖으로 열지 않는다
+  type: ClusterIP           # 클러스터 밖으로 열지 않는다 (브라우저가 Redis에 직접 붙을 일이 없으므로)
   selector:
-    app: redis
+    app: redis                        # 이 라벨이 붙은 Pod(들)로 요청을 전달
   ports:
-    - port: 6379
-      targetPort: 6379
+    - port: 6379                      # Service가 요청을 받는 포트
+      targetPort: 6379                # 실제로 전달할 Pod의 포트 (컨테이너의 containerPort와 동일)
 ---
 # [공통-인프라] Kafka (KRaft 단일 노드) — 서비스 간 이벤트
 # 이미지 태그는 서버에서 실제 돌고 있는 버전으로 확인·고정했다(2026-10-13).
@@ -118,63 +108,75 @@ spec:
 #  2) Service 이름이 kafka 이면 K8s 가 KAFKA_PORT 같은 환경변수를 자동 주입해 이미지가 오작동하는 문제가 있어
 #     enableServiceLinks: false 가 사실상 필수.
 #  3) 단일 브로커이므로 복제 관련 설정을 모두 1 로 낮춘다(기본값이 3이면 내부 토픽 생성이 실패).
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps/v1                     # Deployment가 사용하는 API 버전
+kind: Deployment                       # Pod 실행 개수와 교체 방식을 관리하는 객체
 metadata:
-  name: kafka
-  namespace: his
+  name: kafka                          # 이 Deployment의 이름
+  namespace: his                       # 이 객체가 속하는 작업 구역
 spec:
-  replicas: 1
+  replicas: 1                          # 단일 브로커 구성이라 1개만
   strategy:
-    type: Recreate
+    type: Recreate                     # Redis와 같은 이유 - 단일 Pod 인프라는 먼저 내리고 새로 띄움
   selector:
     matchLabels:
-      app: kafka
+      app: kafka                       # 이 라벨이 붙은 Pod를 관리 대상으로 삼음
   template:
     metadata:
       labels:
-        app: kafka
+        app: kafka                     # Pod에 실제로 붙는 라벨
     spec:
-      enableServiceLinks: false
+      enableServiceLinks: false        # 위 "핵심 3가지"의 2번 - Service 이름이 kafka라 자동 주입 끄는 게 필수
       containers:
-        - name: kafka
+        - name: kafka                  # 컨테이너 이름
           image: apache/kafka:4.3.1          # latest 금지. 서버 실제 버전으로 고정(확인됨)
           ports:
-            - containerPort: 9092
+            - containerPort: 9092      # 클라이언트(PLAINTEXT 리스너)가 접속하는 포트
           env:
             - { name: KAFKA_NODE_ID, value: "1" }
+            # 브로커/컨트롤러 노드 식별자 - 단일 노드라 1 고정
             - { name: KAFKA_PROCESS_ROLES, value: "broker,controller" }
+            # KRaft 모드에서 이 노드가 맡을 역할 - broker(메시지 처리)와 controller(메타데이터 관리)를 한 Pod가 겸함
             - { name: KAFKA_LISTENERS, value: "PLAINTEXT://:9092,CONTROLLER://:9093" }
+            # 컨테이너 안에서 실제로 바인딩해서 들을 주소:포트 목록 (PLAINTEXT=일반 클라이언트용, CONTROLLER=KRaft 내부 통신용)
             - { name: KAFKA_ADVERTISED_LISTENERS, value: "PLAINTEXT://kafka:9092" }
+            # 클라이언트가 "다음부터는 이 주소로 다시 접속해" 라고 안내받는 주소 - 위 "핵심 3가지" 1번.
+            # billing 기준 spring.kafka.bootstrap-servers=kafka:9092 로 최초 접속한 뒤, 이후 요청도 이 주소를 계속 씀.
+            # 이 값이 실제 도달 불가능한 주소(예: 컨테이너 내부 전용 이름)면 최초 연결 성공 후 UnknownHostException이 반복됨.
             - { name: KAFKA_CONTROLLER_LISTENER_NAMES, value: "CONTROLLER" }
+            # 위 리스너 중 어떤 이름이 KRaft 컨트롤러 전용인지 지정
             - { name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP, value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" }
+            # 각 리스너 이름별로 어떤 보안 프로토콜을 쓸지 매핑 - 둘 다 암호화 없는 PLAINTEXT(사내망 전제)
             - { name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: "1@localhost:9093" }
+            # KRaft 컨트롤러 쿼럼 구성원 목록("노드ID@호스트:포트") - 단일 노드라 자기 자신(localhost) 하나뿐
             - { name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR, value: "1" }
+            # 컨슈머 오프셋을 저장하는 내부 토픽의 복제본 수 - 기본값 3인데 브로커가 1개뿐이라 3으로 두면 토픽 생성 자체가 실패(핵심 3가지 3번)
             - { name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR, value: "1" }
+            # 트랜잭션 상태를 기록하는 내부 토픽의 복제본 수 - 위와 같은 이유로 1
             - { name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR, value: "1" }
+            # 트랜잭션 로그 쓰기가 성공으로 인정되기 위한 최소 동기화 복제본 수 - 역시 단일 브로커라 1
           resources:
-            requests: { cpu: 200m, memory: 512Mi }
-            limits: { memory: 1Gi }
+            requests: { cpu: 200m, memory: 512Mi }  # 최소 보장 자원 (0.2코어, 512MiB)
+            limits: { memory: 1Gi }                  # 메모리 상한 1GiB
           readinessProbe:
-            tcpSocket: { port: 9092 }
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            tcpSocket: { port: 9092 }  # 9092 포트 연결 여부로 준비 상태 판단
+            initialDelaySeconds: 10    # Kafka는 기동이 느려서 10초는 무조건 기다렸다가 첫 검사 시작
+            periodSeconds: 10          # 이후 10초 간격으로 검사
           # 데이터는 컨테이너 안에 있어 Pod 가 다시 뜨면 사라진다.
           # 미소비 메시지가 사라져도 INTERFACE_SEND_LOG 는 DB 기준으로 재처리된다.
 ---
-apiVersion: v1
-kind: Service
+apiVersion: v1                          # Service가 사용하는 API 버전
+kind: Service                          # 요청을 Pod로 연결하는 고정 접점
 metadata:
-  name: kafka               # 클러스터 안 주소: kafka:9092
-  namespace: his
+  name: kafka               # 클러스터 안 주소: kafka:9092 - 각 서비스의 SPRING_KAFKA_BOOTSTRAP_SERVERS가 이 이름을 씀
+  namespace: his                       # 이 객체가 속하는 작업 구역
 spec:
-  type: ClusterIP
+  type: ClusterIP                      # 클러스터 밖으로 열지 않음
   selector:
-    app: kafka
+    app: kafka                        # 이 라벨이 붙은 Pod로 요청 전달
   ports:
-    - name: broker
-      port: 9092
-      targetPort: 9092
+    - name: broker                    # 이 포트의 별명 (여러 포트 중 구분용, 지금은 하나뿐)
+      port: 9092                      # Service가 요청을 받는 포트
+      targetPort: 9092                # 실제로 전달할 Pod의 포트
 ---
 # [공통-인프라] SeaweedFS — 영상·병리 첨부·직원 사진 파일 저장
 # 팀 공용 docker-compose.yml 의 seaweedfs 서비스(`weed mini -dir=/data`)를 그대로 옮긴 것이다.
@@ -184,80 +186,80 @@ spec:
 # [공통-인프라] SeaweedFS 데이터 저장 공간
 # 용량(5Gi)은 '요청'일 뿐 minikube 기본 저장소는 크기를 강제하지 않는다.
 # 실제로 쓰는 디스크는 minikube 를 실행하는 계정의 서버 디스크이며, 여유 용량은 서버 관리자에게 확인한다(가이드 3-1).
-apiVersion: v1
-kind: PersistentVolumeClaim
+apiVersion: v1                          # PVC가 사용하는 API 버전
+kind: PersistentVolumeClaim            # "이만큼 저장 공간 주세요"라고 요청하는 객체 - Pod가 재시작돼도 내용이 유지되는 디스크
 metadata:
-  name: seaweedfs-data
-  namespace: his
+  name: seaweedfs-data                 # 이 PVC의 이름 - 아래 Deployment의 volumes에서 이 이름으로 연결
+  namespace: his                       # 이 객체가 속하는 작업 구역
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: ["ReadWriteOnce"]       # 한 번에 Pod 하나만 마운트해서 쓸 수 있음 (SeaweedFS가 1개 Pod뿐이라 충분)
   resources:
     requests:
-      storage: 5Gi
+      storage: 5Gi                    # 요청하는 저장 공간 크기 (실제 강제는 안 됨, 위 설명 참고)
   # storageClassName 을 생략하면 minikube 기본값(standard)이 쓰인다.
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps/v1                     # Deployment가 사용하는 API 버전
+kind: Deployment                       # Pod 실행 개수와 교체 방식을 관리하는 객체
 metadata:
-  name: seaweedfs
-  namespace: his
+  name: seaweedfs                      # 이 Deployment의 이름
+  namespace: his                       # 이 객체가 속하는 작업 구역
 spec:
-  replicas: 1
+  replicas: 1                          # 단일 인스턴스
   strategy:
-    type: Recreate
+    type: Recreate                     # 단일 Pod 인프라 공통 전략
   selector:
     matchLabels:
-      app: seaweedfs
+      app: seaweedfs                   # 이 라벨이 붙은 Pod를 관리 대상으로 삼음
   template:
     metadata:
       labels:
-        app: seaweedfs
+        app: seaweedfs                 # Pod에 실제로 붙는 라벨
     spec:
-      enableServiceLinks: false
+      enableServiceLinks: false        # Kafka/Redis와 같은 이유로 자동 환경변수 주입 방지
       containers:
-        - name: seaweedfs
+        - name: seaweedfs              # 컨테이너 이름
           # 서버는 mini 가 아니라 master/volume/filer/s3 를 각각 별도 프로세스로 띄워 쓰고 있다(ps aux 로 확인, 2026-10-13).
           # mini 는 이 네 역할을 한 프로세스로 합쳐 흉내 내는 명령이라 기능적으로는 대체되지만 완전히 같은 구성은 아니다.
           # 버전은 서버에서 실제 확인한 값(weed version)으로 고정했다. Docker Hub 태그 존재 확인됨.
           image: chrislusf/seaweedfs:4.47
-          args: ["mini", "-dir=/data"]
+          args: ["mini", "-dir=/data"]  # master+volume+filer+s3 네 역할을 한 프로세스로 묶어서 실행, 데이터는 /data에 저장
           ports:
-            - { name: master, containerPort: 9333 }
-            - { name: filer, containerPort: 8888 }
-            - { name: s3, containerPort: 8333 }
+            - { name: master, containerPort: 9333 }   # 클러스터 관리용 포트
+            - { name: filer, containerPort: 8888 }    # 파일 업로드/다운로드용 포트 - billing이 영상 등 첨부파일 접근 시 사용
+            - { name: s3, containerPort: 8333 }       # S3 호환 API 포트 - 브라우저가 직원 사진 등을 직접 받을 때 사용
             - { name: admin, containerPort: 23646 }     # 관리 화면. 외부로 열지 않는다
           volumeMounts:
-            - name: data
-              mountPath: /data
+            - name: data                 # 아래 volumes의 "data"와 매칭
+              mountPath: /data            # 컨테이너 안에서 이 경로로 마운트 - 실제 파일이 저장되는 위치
           resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { memory: 1Gi }
+            requests: { cpu: 100m, memory: 256Mi }   # 최소 보장 자원
+            limits: { memory: 1Gi }                  # 메모리 상한
           readinessProbe:
-            tcpSocket: { port: filer }
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            tcpSocket: { port: filer }  # filer 포트(8888) 연결 여부로 준비 상태 판단
+            initialDelaySeconds: 10     # 10초 기다렸다가 첫 검사
+            periodSeconds: 10           # 이후 10초 간격
       volumes:
         # minikube 의 기본 StorageClass(standard)가 서버 디스크에 자리를 만들어 준다.
         # Pod 를 다시 띄우거나 `minikube stop/start` 를 해도 파일은 남는다.
         # 단, `minikube delete` 를 하면 함께 사라진다.
-        - name: data
+        - name: data                    # 위 volumeMounts의 "data"와 매칭되는 이름
           persistentVolumeClaim:
-            claimName: seaweedfs-data
+            claimName: seaweedfs-data   # 위에서 만든 PVC 이름 - 이 볼륨이 실제로 그 PVC가 가리키는 디스크를 씀
         # 연습용으로 파일을 남기지 않아도 되면 위 두 줄(persistentVolumeClaim 부분)을 지우고 아래로 바꾼다.
         # - name: data
         #   emptyDir: {}
         # 주의: hostPath 는 서버가 아니라 minikube 컨테이너 안의 폴더를 가리킨다. 쓰지 않는다.
 ---
-apiVersion: v1
-kind: Service
+apiVersion: v1                          # Service가 사용하는 API 버전
+kind: Service                          # 요청을 Pod로 연결하는 고정 접점
 metadata:
   name: seaweedfs           # 클러스터 안 주소: seaweedfs:8888(filer), :8333(s3)
-  namespace: his
+  namespace: his                       # 이 객체가 속하는 작업 구역
 spec:
-  type: ClusterIP
+  type: ClusterIP                      # 클러스터 밖으로 열지 않음 (프론트/외부는 다른 경로로 접근하거나 별도 설정 필요)
   selector:
-    app: seaweedfs
+    app: seaweedfs                    # 이 라벨이 붙은 Pod로 요청 전달
   ports:
-    - { name: filer, port: 8888, targetPort: 8888 }
-    - { name: s3, port: 8333, targetPort: 8333 }
-    - { name: master, port: 9333, targetPort: 9333 }
+    - { name: filer, port: 8888, targetPort: 8888 }    # 파일 업/다운로드용
+    - { name: s3, port: 8333, targetPort: 8333 }       # S3 호환 API용
+    - { name: master, port: 9333, targetPort: 9333 }   # 클러스터 관리용

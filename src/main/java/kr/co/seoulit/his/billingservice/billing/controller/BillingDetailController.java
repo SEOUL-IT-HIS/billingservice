@@ -5,7 +5,6 @@ import kr.co.seoulit.his.billingservice.common.response.ApiResponse;
 import kr.co.seoulit.his.billingservice.common.response.SuccessCode;
 import kr.co.seoulit.his.billingservice.billing.service.BillingDetailService;
 import kr.co.seoulit.his.billingservice.billing.service.PaymentService;
-import kr.co.seoulit.his.billingservice.billing.dto.PayCancelIdDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

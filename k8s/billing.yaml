@@ -29,7 +29,7 @@ metadata:
   labels:
     app: billing                       # Deployment 자체에 붙이는 이름표
 spec:                                  # 원하는 실행 상태
-  replicas: 1                          # 평소 유지할 Pod 개수
+  replicas: 3                        # 평소 유지할 Pod 개수
   selector:
     matchLabels:
       app: billing                     # 이 이름표가 붙은 Pod를 관리
@@ -59,7 +59,7 @@ spec:                                  # 원하는 실행 상태
 
       containers:                      # 실제 애플리케이션 컨테이너
         - name: billing                # 컨테이너 이름
-          image: whatyourname22/his-billing:v2.2 # 실행할 이미지와 버전
+          image: whatyourname22/his-billing:v30 # 실행할 이미지와 버전
           imagePullPolicy: IfNotPresent # 서버에 이미지가 없으면 다운로드
           ports:
             - name: http               # 이 포트의 별명
