@@ -29,7 +29,7 @@ metadata:
   labels:
     app: billing                       # Deployment 자체에 붙이는 이름표
 spec:                                  # 원하는 실행 상태
-  replicas: 3                        # 평소 유지할 Pod 개수
+  replicas: 0                       # 평소 유지할 Pod 개수
   selector:
     matchLabels:
       app: billing                     # 이 이름표가 붙은 Pod를 관리
