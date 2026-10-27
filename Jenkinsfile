@@ -150,6 +150,16 @@ pipeline {
             '''
         }
         failure {
+            // 배포가 안 끝났을 때 원인을 이 로그에서 바로 보게 Pod 상태·이벤트·앱 로그를 찍는다
+            sh '''
+                export PATH="$HOME/bin:$PATH"
+                echo "=== pods ==="
+                kubectl -n "$NS" get pods -l "app=$SVC" -o wide || true
+                echo "=== describe ==="
+                kubectl -n "$NS" describe pod -l "app=$SVC" | tail -60 || true
+                echo "=== logs ==="
+                kubectl -n "$NS" logs -l "app=$SVC" --all-containers --tail=80 || true
+            '''
             echo "실패. 배포 단계에서 실패했다면 이전 Pod 가 계속 서비스 중이다(maxUnavailable 0). 원인: kubectl -n his describe pod -l app=${CFG.svc}"
         }
     }
