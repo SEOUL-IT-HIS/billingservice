@@ -50,16 +50,16 @@ spec:
       enableServiceLinks: false
 
       # admin이 실행된 다음 billing 시작
-      initContainers:
-        - name: wait-for-admin
-          image: busybox:1.36
-          command:
-            - sh
-            - -c
-            - |
-              echo "waiting for admin:9191 ..."
-              until nc -z admin 9191; do sleep 3; done
-              echo "admin is up"
+      # initContainers:
+      #   - name: wait-for-admin
+      #     image: busybox:1.36
+      #     command:
+      #       - sh
+      #       - -c
+      #       - |
+      #         echo "waiting for admin:9191 ..."
+      #         until nc -z admin 9191; do sleep 3; done
+      #         echo "admin is up"
 
       containers:
         - name: billing
